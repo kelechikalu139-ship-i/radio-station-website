@@ -6,9 +6,13 @@ import Programs from './pages/Programs'
 import Player from './pages/Player'
 import About from './pages/About'
 import Contact from './pages/Contact'
+
 import OAPs from './pages/OAPs'
 import HostProfile from './pages/HostProfile'
 import FullHostPage from './pages/FullHostPage'
+
+import NewsEventPage from './pages/NewsEventPage';
+import NewsEventFullPage from './pages/NewsEventFullPage';
 
 
 
@@ -22,6 +26,12 @@ const App = () => {
         <Route path='/player' element={<Player/>}/>
         <Route path='/about' element={<About/>}/>
         <Route path='/contact' element={<Contact/>}/>
+
+        {/* NEWS AND EVENT SECTION  */}
+        <Route path='/newsevent' element={<NewsEventPage/>}/>
+        <Route path='newsevent/:id' element={<NewsEventFullPage/>}/>
+
+        {/* OAP SECTION  */}
         <Route path='/oaps' element={<OAPs/>}/>
         <Route path='oaps/:id' element={<HostProfile/>}/>
         <Route path='oaps/:id/full' element={<FullHostPage/>}/>

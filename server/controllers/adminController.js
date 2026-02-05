@@ -439,7 +439,7 @@
 // server/controllers/adminController.js
 import { validationResult } from "express-validator";
 import pool from "../config/db.js";
-import bcrypt from "bcrypt";
+import bcrypt from "bcryptjs";
 import jwt from "jsonwebtoken";
 import { v4 as uuidv4 } from "uuid";
 import cloudinary from "../config/cloudinary.js";

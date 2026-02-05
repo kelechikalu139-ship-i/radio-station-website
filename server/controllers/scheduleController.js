@@ -182,3 +182,170 @@ export async function deleteSchedule(req, res) {
     return res.status(500).json({ error: "Server error" });
   }
 }
+
+
+// Public Api 
+
+// amybe later i will put it a a seperate file publicScheduleController.js
+
+export async function getLiveProgram(req, res) {
+  try {
+    const [rows] = await pool.query(`
+      SELECT 
+        p.id, p.title, p.description, p.image_url,
+        o.name AS host_name, o.image_url AS host_image,
+        s.start_at, s.end_at
+      FROM schedules s
+      INNER JOIN programs p ON p.id = s.program_id
+      INNER JOIN oaps o ON o.id = s.oap_id
+      WHERE s.start_at <= NOW() 
+        AND s.end_at > NOW()
+      ORDER BY s.start_at DESC
+      LIMIT 1
+    `);
+
+    if (rows.length === 0) {
+      return res.json({ live: null });
+    }
+
+    res.json({ live: rows[0] });
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ error: "Server error" });
+  }
+}
+
+// export async function getNextProgram(req, res) {
+//   try {
+//     const [rows] = await pool.query(`
+//       SELECT 
+//         p.id, p.title, p.description, p.image_url,
+//         o.name AS host_name, o.image_url AS host_image,
+//         s.start_at, s.end_at
+//       FROM schedules s
+//       INNER JOIN programs p ON p.id = s.program_id
+//       INNER JOIN oaps o ON o.id = s.oap_id
+//       WHERE s.start_at > NOW()
+//       ORDER BY s.start_at ASC
+//       LIMIT 1
+//     `);
+
+//     if (rows.length === 0) {
+//       return res.json({ next: null });
+//     }
+
+//     res.json({ next: rows[0] });
+//   } catch (err) {
+//     console.error(err);
+//     res.status(500).json({ error: "Server error" });
+//   }
+// }
+
+export async function getNextProgram(req, res) {
+  try {
+    const [rows] = await pool.query(`
+      SELECT 
+        p.id, p.title, p.description, p.image_url,
+        o.name AS host_name, o.image_url AS host_image,
+        s.start_at, s.end_at
+      FROM schedules s
+      INNER JOIN programs p ON p.id = s.program_id
+      INNER JOIN oaps o ON o.id = s.oap_id
+      WHERE s.start_at > NOW()
+      ORDER BY s.start_at ASC
+      LIMIT 3
+    `);
+
+    res.json({
+      next: rows[0] || null,
+      later: rows.slice(1) || []
+    });
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ error: "Server error" });
+  }
+}
+
+
+// For full schedule (e.g. today or week)
+export async function getTodaySchedule(req, res) {
+  try {
+    const [rows] = await pool.query(`
+      SELECT 
+        DAYNAME(s.start_at) AS day,
+        p.title, p.description,
+        o.name AS host,
+        TIME_FORMAT(s.start_at, '%H:%i') AS start_time,
+        TIME_FORMAT(s.end_at, '%H:%i') AS end_time,
+        s.start_at
+      FROM schedules s
+      INNER JOIN programs p ON p.id = s.program_id
+      INNER JOIN oaps o ON o.id = s.oap_id
+      WHERE DATE(s.start_at) = CURDATE()
+      ORDER BY s.start_at ASC
+    `);
+
+    res.json({ today: rows });
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ error: "Server error" });
+  }
+}
+
+
+
+export async function getWeeklySchedule(req, res) {
+  try {
+
+   const [rows] = await pool.query(`
+  SELECT 
+    DAYNAME(s.start_at) AS day,
+    p.title,
+    o.name AS host,
+    TIME_FORMAT(s.start_at, '%H:%i') AS start_time,
+    TIME_FORMAT(s.end_at, '%H:%i') AS end_time,
+    COALESCE(p.description,'') AS description
+  FROM schedules s
+  INNER JOIN programs p ON p.id = s.program_id
+  INNER JOIN oaps o ON o.id = s.oap_id
+  WHERE s.start_at IS NOT NULL
+  ORDER BY 
+    FIELD(DAYNAME(s.start_at),
+      'Monday','Tuesday','Wednesday',
+      'Thursday','Friday','Saturday','Sunday'
+    ),
+    s.start_at ASC
+`);
+
+
+    const byDay = {};
+
+    rows.forEach(row => {
+
+      if (!row.day) return;
+
+      if (!byDay[row.day]) {
+        byDay[row.day] = [];
+      }
+
+      byDay[row.day].push({
+  title: row.title,
+  host: row.host,
+  desc: row.description,
+  start_time: row.start_time,
+  end_time: row.end_time
+});
+
+
+    });
+
+    res.json({ schedule: byDay });
+
+  } catch (err) {
+    console.error("🔥 Weekly Schedule Error:", err); // VERY IMPORTANT
+    res.status(500).json({
+      error: "Server error",
+      details: err.message
+    });
+  }
+}

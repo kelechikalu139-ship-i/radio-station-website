@@ -20,20 +20,58 @@
 
 
 // middleware/checkBlacklist.js
-const pool = require("../config/db");
+// const pool = require("../config/db");
 
-async function isBlacklistedToken(token) {
+// async function isBlacklistedToken(token) {
+//   if (!token) return false;
+//   try {
+//     const [rows] = await pool.query(
+//       "SELECT id FROM jwt_blacklist WHERE token = ? OR jti = ? LIMIT 1",
+//       [token, token]
+//     );
+//     return rows.length > 0;
+//   } catch (err) {
+//     console.error("blacklist check error", err);
+//     return false;
+//   }
+// }
+
+// module.exports = { isBlacklistedToken };
+
+
+// import pool from "../config/db.js";
+
+// export async function isBlacklistedToken(token) {
+//   try {
+//     const [rows] = await pool.query(
+//       "SELECT id FROM token_blacklist WHERE token = ? LIMIT 1",
+//       [token]
+//     );
+
+//     return rows.length > 0;
+//   } catch (err) {
+//     console.error("blacklist check error", err);
+//     return false;
+//   }
+// }
+
+
+// server/middleware/checkBlacklist.js
+import pool from "../config/db.js";
+
+export async function isBlacklistedToken(token) {
   if (!token) return false;
+
   try {
     const [rows] = await pool.query(
-      "SELECT id FROM jwt_blacklist WHERE token = ? OR jti = ? LIMIT 1",
-      [token, token]
+      "SELECT id FROM jwt_blacklist WHERE token = ? LIMIT 1",
+      [token]
     );
+
     return rows.length > 0;
   } catch (err) {
-    console.error("blacklist check error", err);
+    console.error("blacklist check error:", err);
     return false;
   }
 }
 
-module.exports = { isBlacklistedToken };

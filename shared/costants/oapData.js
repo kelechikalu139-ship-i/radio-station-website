@@ -5,8 +5,9 @@ const oapsData = [
     id: 1,
     name: "S.D Bawa",
     show: "Morning Ride",
-    photo:
-      "https://images.unsplash.com/photo-1607746882042-944635dfe10e?auto=format&fit=crop&w=500&q=80",
+    photo:'../images/oaps/oap4.jpeg',
+    // photo:
+    //   "https://images.unsplash.com/photo-1607746882042-944635dfe10e?auto=format&fit=crop&w=500&q=80",
     instagram: "https://instagram.com/sdbawa",
     facebook: "https://facebook.com/sdbawa",
     twitter: "https://twitter.com/sdbawa",
@@ -22,8 +23,9 @@ const oapsData = [
     id: 2,
     name: "Grace Daniels",
     show: "Afternoon Vibes",
-    photo:
-      "https://images.unsplash.com/photo-1544005313-94ddf0286df2?auto=format&fit=crop&w=500&q=80",
+    photo:'../images/oaps/oap3.jpeg',
+    // photo:
+    //   "https://images.unsplash.com/photo-1544005313-94ddf0286df2?auto=format&fit=crop&w=500&q=80",
     instagram: "https://instagram.com/graced",
     facebook: "https://facebook.com/graced",
     twitter: "https://twitter.com/graced",
@@ -34,8 +36,9 @@ const oapsData = [
     id: 3,
     name: "John Matrix",
     show: "Night Groove",
-    photo:
-      "https://images.unsplash.com/photo-1504595403659-9088ce801e29?auto=format&fit=crop&w=500&q=80",
+    photo:'../images/oaps/oap2.jpeg',
+    // photo:
+    //   "https://images.unsplash.com/photo-1504595403659-9088ce801e29?auto=format&fit=crop&w=500&q=80",
     instagram: "https://instagram.com/johnmatrix",
     facebook: "https://facebook.com/johnmatrix",
     twitter: "https://twitter.com/johnmatrix",
@@ -46,14 +49,92 @@ const oapsData = [
     id: 4,
     name: "STJ",
     show: "Lets Talk",
-    photo:
-      "https://images.unsplash.com/photo-1504595403659-9088ce801e29?auto=format&fit=crop&w=500&q=80",
+    photo: '../images/oaps/oap1.jpeg',
+    // photo:
+    //   "https://images.unsplash.com/photo-1504595403659-9088ce801e29?auto=format&fit=crop&w=500&q=80",
     instagram: "https://instagram.com/johnmatrix",
     facebook: "https://facebook.com/johnmatrix",
     twitter: "https://twitter.com/johnmatrix",
     bio: "John curates deep cuts and late-night mixes. Expect chilled beats and long-form conversations.",
     highlights: ["Late-night remix special — Oct 2025"],
   },
+  {
+    id:5,
+    name: "Musa Tafiki",
+    show: "You and your Health",
+    photo:'../images/oaps/oap5.jpeg',
+    instagram: "https://instagram.com/johnmatrix",
+    facebook: "https://facebook.com/johnmatrix",
+    twitter: "https://twitter.com/johnmatrix",
+    bio:"Musa brings that vibes on the air waves",
+    highlights:["Sport Date - Jan 2026"]
+  },
+    {
+    id:6,
+    name: "S.D Boso",
+    show: "Sport Ultimate",
+    photo:'../images/oaps/oap6.jpeg',
+    instagram: "https://instagram.com/johnmatrix",
+    facebook: "https://facebook.com/johnmatrix",
+    twitter: "https://twitter.com/johnmatrix",
+    bio:"Musa brings that vibes on the air waves",
+    highlights:["Sport Date - Jan 2026"]
+  },
+    {
+    id:7,
+    name: "Musa Tafiki",
+    show: "You and your Health",
+    photo:'../images/oaps/oap5.jpeg',
+    instagram: "https://instagram.com/johnmatrix",
+    facebook: "https://facebook.com/johnmatrix",
+    twitter: "https://twitter.com/johnmatrix",
+    bio:"Musa brings that vibes on the air waves",
+    highlights:["Sport Date - Jan 2026"]
+  },
+    {
+    id:8,
+    name: "Musa Tafiki",
+    show: "You and your Health",
+    photo:'../images/oaps/oap6.jpeg',
+    instagram: "https://instagram.com/johnmatrix",
+    facebook: "https://facebook.com/johnmatrix",
+    twitter: "https://twitter.com/johnmatrix",
+    bio:"Musa brings that vibes on the air waves",
+    highlights:["Sport Date - Jan 2026"]
+  },
+    {
+    id:9,
+    name: "Musa Tafiki",
+    show: "You and your Health",
+    photo:'../images/oaps/oap7.jpeg',
+    instagram: "https://instagram.com/johnmatrix",
+    facebook: "https://facebook.com/johnmatrix",
+    twitter: "https://twitter.com/johnmatrix",
+    bio:"Musa brings that vibes on the air waves",
+    highlights:["Sport Date - Jan 2026"]
+  },
+    {
+    id:10,
+    name: "Musa Tafiki",
+    show: "You and your Health",
+    photo:'../images/oaps/oap8.jpeg',
+    instagram: "https://instagram.com/johnmatrix",
+    facebook: "https://facebook.com/johnmatrix",
+    twitter: "https://twitter.com/johnmatrix",
+    bio:"Musa brings that vibes on the air waves",
+    highlights:["Sport Date - Jan 2026"]
+  },
+    {
+    id:11,
+    name: "Caleb Manase",
+    show: "You and your Health",
+    photo:'../images/oaps/oap9.jpeg',
+    instagram: "https://instagram.com/johnmatrix",
+    facebook: "https://facebook.com/johnmatrix",
+    twitter: "https://twitter.com/johnmatrix",
+    bio:"Musa brings that vibes on the air waves",
+    highlights:["Sport Date - Jan 2026"]
+  }
 ];
 
 export default oapsData;

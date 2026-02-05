@@ -7,10 +7,12 @@
     "dev": "vite",
     "build": "vite build",
     "lint": "eslint .",
-    "preview": "vite preview"
+    "preview": "vite preview",
+    "update-browsers": "npx update-browserslist-db@latest"
   },
   "dependencies": {
     "axios": "^1.13.2",
+    "date-fns": "^4.1.0",
     "framer-motion": "^12.23.24",
     "hls": "^0.0.1",
     "jwt-decode": "^4.0.0",

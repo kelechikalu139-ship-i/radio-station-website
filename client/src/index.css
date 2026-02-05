@@ -83,3 +83,9 @@ button:focus-visible {
 .compact .p-6 { padding: 0.5rem; }
 .compact .p-4 { padding: 0.4rem; }
 .compact .rounded-lg { border-radius: 0.375rem; }
+
+
+/* global.css */
+.social-btn {
+  @apply inline-flex items-center gap-2 px-4 py-2 rounded-lg bg-white/10 hover:bg-white/20 transition text-sm;
+}

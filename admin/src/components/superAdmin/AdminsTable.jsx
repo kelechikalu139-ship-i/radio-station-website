@@ -174,8 +174,8 @@ export default function AdminsTable({
                 <tr key={a?.id ?? a?._id ?? idx} className="border-t hover:bg-gray-50 dark:hover:bg-gray-700">
                   <td className="py-3 px-2 flex items-center gap-3">
                     <div className="flex items-center gap-3">
-                      {a?.avatarUrl ? (
-                        <img src={a.avatarUrl} alt={a?.name ?? "avatar"} className="w-9 h-9 rounded-full object-cover" />
+                      {a?.avatar_url ? (  
+                        <img src={a.avatar_url} alt={a?.name ?? "avatar"} className="w-9 h-9 rounded-full object-cover" />
                       ) : (
                         <div className="w-9 h-9 rounded-full flex items-center justify-center bg-gray-100 text-gray-700">
                           {initials(a?.name)}

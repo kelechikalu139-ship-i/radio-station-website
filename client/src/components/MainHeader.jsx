@@ -59,9 +59,12 @@ export default function MainNavbar() {
         <div className="flex items-center justify-between h-16">
           <Link to="/" className="flex items-center gap-3">
             <div
-              className={`w-10 h-10 rounded-lg bg-linear-to-br from-yellow-300 to-yellow-400 flex items-center justify-center text-purple-900 font-extrabold text-lg shadow-sm`}
+              className={`w-15 h-15 rounded-lg bg-linear-to-br from-yellow-300 to-yellow-400 flex items-center justify-center text-purple-900 font-extrabold text-lg shadow-sm`}
             >
-              NEX
+              {/* NEX */}
+              <img src="/images/oaps/nexter_logo.jpeg" alt="`nexterlogo"
+              className="w-full h-full  object-cover rounded-lg bg-yellow-350 p-1" 
+              />
             </div>
             <div className="hidden sm:block">
               <div
@@ -69,14 +72,15 @@ export default function MainNavbar() {
                   scrolled ? "text-purple-900 dark:text-white" : "text-white"
                 }`}
               >
-                Nexter FM
+                Nexter Radio
               </div>
               <div
                 className={`text-xs -mt-0.5 ${
                   scrolled ? "text-gray-700 dark:text-gray-300" : "text-white/70"
                 }`}
               >
-                Sound that moves
+                Next Gen Radio
+                97.9
               </div>
             </div>
           </Link>
@@ -105,6 +109,13 @@ export default function MainNavbar() {
               className={`${scrolled ? "text-gray-700 dark:text-gray-200" : "text-white/90"} text-sm hover:text-yellow-300 transition`}
             >
               OAPS
+            </Link>
+
+            <Link
+              to="/newsevent"
+              className={`${scrolled ? "text-gray-700 dark:text-gray-200" : "text-white/90"} text-sm hover:text-yellow-300 transition`}
+            >
+              News and Event
             </Link>
             <Link
               to="/contact"
@@ -200,6 +211,9 @@ export default function MainNavbar() {
               </Link>
               <Link to="/oaps" onClick={() => setOpen(false)} className="px-3 py-2 rounded-lg hover:bg-white/8 dark:hover:bg-gray-700/40 transition">
                 OAPS
+              </Link>
+              <Link to="/newsevent" onClick={() => setOpen(false)} className="px-3 py-2 rounded-lg hover:bg-white/8 dark:hover:bg-gray-700/40 transition">
+                News and Event
               </Link>
               <Link to="/contact" onClick={() => setOpen(false)} className="px-3 py-2 rounded-lg hover:bg-white/8 dark:hover:bg-gray-700/40 transition">
                 Contact

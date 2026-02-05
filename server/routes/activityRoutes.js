@@ -16,6 +16,7 @@ import { verifyToken } from "../middleware/auth.js";
 const router = express.Router();
 
 router.get("/", getRecentActivity);
-router.get("/activitylogs", verifyToken, getAllActivityLog);
+router.get("/activity", verifyToken, getAllActivityLog);
+// router.get("/", getAllActivityLog)
 
 export default router;

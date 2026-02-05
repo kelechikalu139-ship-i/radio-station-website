@@ -2,10 +2,11 @@ import React from 'react'
 import AboutHero from '../components/aboutSection/AboutHero'
 import OurStory from '../components/aboutSection/OurStory'
 import MissionVision from '../components/aboutSection/MissionVision'
-import Stats from '../components/aboutSection/Stats'
-import TeamGrid from '../components/aboutSection/TeamGrid'
+// import Stats from '../components/aboutSection/Stats'
+// import TeamGrid from '../components/aboutSection/TeamGrid'
 import Testimonials from '../components/aboutSection/Testimonials'
 import CTAJoin from '../components/aboutSection/CTAJoin'
+import TeamSection from '../components/aboutSection/TeamSection'
 // import OAPProfiles from '../components/aboutSection/OAPProfiles'
 
 const About = () => {
@@ -14,8 +15,9 @@ const About = () => {
       <AboutHero/>
       <OurStory/>
       <MissionVision/>
-      <Stats/>
-      <TeamGrid/>
+      {/* <Stats/> */}
+      {/* <TeamGrid/> */}
+      <TeamSection/>
       <Testimonials/>
       <CTAJoin/>
       {/* <OAPProfiles/> */}

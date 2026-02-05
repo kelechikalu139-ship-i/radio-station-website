@@ -7,6 +7,9 @@ import {
   updateSchedule,
   deleteSchedule,
   scheduleCount,
+  // getLiveProgram,
+  // getNextProgram,
+  // getTodaySchedule
 } from "../controllers/scheduleController.js";
 import { verifyToken, requireRole } from "../middleware/auth.js";
 
@@ -20,5 +23,11 @@ router.get("/schedules/:id", verifyToken, getSchedule);
 router.post("/schedules", verifyToken, requireRole("superadmin", "admin"), createSchedule);
 router.put("/schedules/:id", verifyToken, requireRole("superadmin", "admin"), updateSchedule);
 router.delete("/schedules/:id", verifyToken, requireRole("superadmin"), deleteSchedule);
+
+// public routes here 
+// router.get('/schedule/live-program', getLiveProgram);
+// router.get('/schedule/next-program', getNextProgram);
+// router.get('/schedule/today', getTodaySchedule);
+// or router.get('/schedule', getFullSchedule); for week view
 
 export default router;
