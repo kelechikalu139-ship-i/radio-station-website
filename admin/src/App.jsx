@@ -130,6 +130,8 @@ import AdminPage from "./pages/superAdmin/AdminPage";
 import OAPsPage from "./pages/admin/OAPsPage";
 import SchedulePage from "./pages/admin/SchedulePage";
 import ProgramsPage from "./pages/admin/ProgramsPage";
+
+
 import SuperAdminOAPsPage from "./pages/superAdmin/OAPsPage";
 import SuperProgramsPage from "./pages/superAdmin/ProgramsPage";
 import SuperAdminSchedule from "./pages/superAdmin/SchedulePage";
@@ -139,6 +141,7 @@ import ActivityLog from "./pages/superAdmin/ActivityLog";
 import SuperAdminSettings from "./pages/superAdmin/SettingsPage";
 
 import ProtectedRoute from "./utils/ProtectedRoute";
+import NewsBlog from "./pages/superAdmin/NewsBlog";
 
 
 export default function App() {
@@ -164,6 +167,7 @@ export default function App() {
     <Route path="episodes" element={<SuperAdminEpisode/>} />
     <Route path="activitylog" element={<ActivityLog/>}/>
     <Route path="settings" element={<SuperAdminSettings/>} />
+    <Route path="newsblog" element={<NewsBlog/>} />
   </Route>
 </Route>
 

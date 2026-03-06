@@ -1,0 +1,17 @@
+# Ignore node_modules (already installed via npm ci)
+node_modules
+# Build artifacts
+dist
+build
+.next
+# Temp / logs
+*.log
+.vite
+coverage
+# Git / editor junk
+.git
+.gitignore
+.DS_Store
+*.swp
+# Large assets if not needed in image (or serve them separately)
+public/large-videos/*

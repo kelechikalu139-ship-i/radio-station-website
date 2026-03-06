@@ -154,6 +154,22 @@ async function logout() {
   }
 }
 
+// async function logout(navigate){
+//   try {
+//     await api.post("/api/admin/logout");
+//   } catch (err) {
+//     console.warn("logout API failed", err?.response?.data || err?.message);
+//   }finally{
+//     setToken(null);
+//     setAdmin(null);
+
+//     localStorage.removeItem("admin_info");
+//     localStorage.removeItem("admin_token");
+
+//     navigate("admin/login")
+//   }
+// }
+
 
   return (
     <AuthContext.Provider value={{ admin, token, loading, login, register, logout, isSuper }}>

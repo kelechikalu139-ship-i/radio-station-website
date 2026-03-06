@@ -11,9 +11,13 @@
     "update-browsers": "npx update-browserslist-db@latest"
   },
   "dependencies": {
+    "@tiptap/extension-image": "^3.20.0",
+    "@tiptap/extension-link": "^3.20.0",
+    "@tiptap/react": "^3.20.0",
+    "@tiptap/starter-kit": "^3.20.0",
     "axios": "^1.13.2",
     "date-fns": "^4.1.0",
-    "framer-motion": "^12.23.24",
+    "framer-motion": "^12.34.2",
     "hls": "^0.0.1",
     "jwt-decode": "^4.0.0",
     "lucide-react": "^0.554.0",
@@ -34,9 +38,6 @@
     "eslint-plugin-react-hooks": "^7.0.1",
     "eslint-plugin-react-refresh": "^0.4.24",
     "globals": "^16.5.0",
-    "vite": "npm:rolldown-vite@7.2.5"
-  },
-  "overrides": {
-    "vite": "npm:rolldown-vite@7.2.5"
+    "vite": "^5.4.8"
   }
 }

@@ -34,21 +34,50 @@
 
 
 // NowPlayingCard.jsx
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import { Pause, Play } from 'lucide-react';
+import api from '../../api/api';
 
-export default function NowPlayingCard() {
+export default function NowPlayingCard() {  
   const [playing, setPlaying] = useState(true);
+  const [current, setCurrent] = useState(null);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(()=>{
+    api.get("/api/schedule/live-program")
+    .then(res =>{
+      setCurrent(res.data.live);
+    })
+    .catch(err => console.error(err))
+    .finally(()=> setLoading(false));
+  }, []);
+
+  if(loading) return <div className='text-white'>Loading...</div>
+
+  if(!current){
+    return(
+      <div className="relative bg-linear-to-b from-purple-800 to-purple-900">
+      <p>Enjoy music and Commercials</p>
+    </div>
+    );
+  }
 
   return (
     <div className="fixed left-6 bottom-6 z-40 bg-white rounded-lg shadow-md p-3 flex items-center gap-3 w-72">
       <div className="w-12 h-12 rounded-md bg-purple-100 flex items-center justify-center">
-        <div className="font-semibold text-purple-700">SB</div>
+        {/* <div className="font-semibold text-purple-700">SB</div> */}
+        <img src={current.host_image} alt={current.host_name} 
+        className="w-full h-full object-cover"
+        />
       </div>
 
       <div className="flex-1">
-        <div className="text-sm font-medium">S.D Bawa</div>
-        <div className="text-xs text-gray-500">Morning Ride — Live</div>
+        <div className="text-sm font-medium">{current.host_name || "Nexter"}</div>
+        <div className="text-xs text-gray-500">{current.title || "Nexter Program" }</div>
+        <p className="text-purple-800 text-sm">
+        Live • {new Date(current.start_at).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })} –{" "}
+        <p>{new Date(current.end_at).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })}</p>
+      </p>
       </div>
 
       <button onClick={() => setPlaying(p => !p)} aria-label={playing ? 'Pause' : 'Play'} className="p-2 rounded-full bg-gray-100">

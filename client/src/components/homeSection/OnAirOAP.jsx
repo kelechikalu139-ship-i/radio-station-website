@@ -119,7 +119,7 @@ export default function OnAirOAP() {
   if (!current) {
     return (
       <div className="relative bg-linear-to-b from-purple-800 to-purple-900 rounded-3xl p-6 shadow-2xl text-center">
-        <p className="text-white text-xl">No one on air right now</p>
+        <p className="text-white text-xl">Enjoy Music and Commercials</p>
       </div>
     );
   }

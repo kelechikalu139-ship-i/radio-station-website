@@ -7,6 +7,7 @@ import MissionVision from '../components/aboutSection/MissionVision'
 import Testimonials from '../components/aboutSection/Testimonials'
 import CTAJoin from '../components/aboutSection/CTAJoin'
 import TeamSection from '../components/aboutSection/TeamSection'
+import NowPlayingCard from '../components/homeSection/NowPlayingCard'
 // import OAPProfiles from '../components/aboutSection/OAPProfiles'
 
 const About = () => {
@@ -21,6 +22,7 @@ const About = () => {
       <Testimonials/>
       <CTAJoin/>
       {/* <OAPProfiles/> */}
+      <NowPlayingCard/>
     </div>
   )
 }

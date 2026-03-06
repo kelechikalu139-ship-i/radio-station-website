@@ -2,6 +2,7 @@ import React from 'react'
 import ContactHero from '../components/contactSection/ContactHero'
 import ContactMain from '../components/contactSection/ContactMain'
 import StickyWhatsAppButton from '../components/contactSection/StickyWhatsAppButton'
+import NowPlayingCard from '../components/homeSection/NowPlayingCard'
 
 const Contact = () => {
   return (
@@ -9,6 +10,7 @@ const Contact = () => {
       <ContactHero/>
       <ContactMain/>
       <StickyWhatsAppButton/>
+      <NowPlayingCard/>
     </div>
   )
 }

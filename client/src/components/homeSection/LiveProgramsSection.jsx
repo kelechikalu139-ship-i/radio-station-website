@@ -349,8 +349,8 @@ export default function LiveProgramsSection() {
             </>
           ) : (
             <div className="text-center py-10">
-              <p className="text-xl">No live program right now</p>
-              <p className="text-white/70 mt-2">Check back soon!</p>
+              <p className="text-xl">Enjoy Music and Commercials</p>
+              <p className="text-white/70 mt-2">Nexter FM Radio</p>
             </div>
           )}
         </motion.div>

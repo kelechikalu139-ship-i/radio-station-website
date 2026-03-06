@@ -4,6 +4,7 @@ import { motion } from 'framer-motion';
 import { Instagram, Facebook, Twitter } from 'lucide-react';
 import OAPsHero from '../components/oapsSection/OAPsHero'
 import OAPsDisplay from '../components/oapsSection/OAPsDispaly';
+import NowPlayingCard from '../components/homeSection/NowPlayingCard';
 
 
 // import OAPSProfile from '../components/oapsSection/OAPSProfile'
@@ -13,7 +14,8 @@ const OAPs = () => {
   return (
      <>
     <OAPsHero/>
-    <OAPsDisplay/>    
+    <OAPsDisplay/>
+    <NowPlayingCard/>    
     </>
   )
 }

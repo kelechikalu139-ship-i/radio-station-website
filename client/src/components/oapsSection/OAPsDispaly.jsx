@@ -77,6 +77,7 @@ import { Link } from "react-router-dom";
 import { motion } from "framer-motion";
 import { Instagram, Facebook, Twitter } from "lucide-react";
 import api from "../../api/api";
+import { SkeletonLoader } from "../ui/SkeletonLoader";
 
 export default function OAPsDisplay() {
   const [oaps, setOaps] = useState([]);
@@ -99,9 +100,10 @@ export default function OAPsDisplay() {
 
   if (loading) {
     return (
-      <section className="container mx-auto px-6 py-14 text-white">
-        Loading On-Air Personalities…
-      </section>
+      // <section className="container mx-auto px-6 py-14 text-white">
+      //   Loading On-Air Personalities…
+      // </section>
+      <SkeletonLoader/>
     );
   }
 

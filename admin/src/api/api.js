@@ -1,40 +1,11 @@
+
+
+
+
 // // admin/src/api.js
-// import axios from "axios";
-
-// const API_BASE = import.meta.env.VITE_API_URL || "http://localhost:4000";
-
-// const api = axios.create({
-//   baseURL: API_BASE,
-//   headers: { "Content-Type": "application/json" },
-// });
-
-// export function setAuthToken(token) {
-//   if (token) {
-//     localStorage.setItem("admin_token", token);
-//     api.defaults.headers.common.Authorization = `Bearer ${token}`;
-//   } else {
-//     localStorage.removeItem("admin_token");
-//     delete api.defaults.headers.common.Authorization;
-//   }
-// }
-
-
-// export const OapApi = axios.create({
-//   baseURL: API_BASE,
-//   headers: { "Content-Type": "application/json" },
-// });
-
-
-
-// export default api;
-
-
-
-
-// admin/src/api.js
 import axios from "axios";
 
-const API_BASE = import.meta.env.VITE_API_URL || "http://localhost:4000";
+const API_BASE = import.meta.env.VITE_API_URL || "http://localhost:4000/";
 
 const api = axios.create({
   baseURL: API_BASE,
@@ -81,3 +52,62 @@ api.interceptors.response.use(
 );
 
 export default api;
+
+
+// admin/src/api.js
+// import axios from "axios";
+
+// // 🔥 IMPORTANT: include /api
+// const API_BASE =
+//   import.meta.env.VITE_API_URL || "http://localhost:4000/api";
+
+// const api = axios.create({
+//   baseURL: API_BASE,
+//   headers: {
+//     "Content-Type": "application/json",
+//   },
+//   withCredentials: true,
+// });
+
+// // ✅ Restore token on load
+// const stored = localStorage.getItem("admin_token");
+// if (stored) {
+//   api.defaults.headers.common.Authorization = `Bearer ${stored}`;
+// }
+
+// export function setAuthToken(token) {
+//   if (token) {
+//     localStorage.setItem("admin_token", token);
+//     api.defaults.headers.common.Authorization = `Bearer ${token}`;
+//   } else {
+//     localStorage.removeItem("admin_token");
+//     delete api.defaults.headers.common.Authorization;
+//   }
+// }
+
+// // Optional second API instance
+// export const OapApi = axios.create({
+//   baseURL: API_BASE,
+//   headers: {
+//     "Content-Type": "application/json",
+//   },
+//   withCredentials: true,
+// });
+
+// // 🔥 Global 401 handler
+// api.interceptors.response.use(
+//   (res) => res,
+//   (err) => {
+//     const status = err?.response?.status;
+
+//     if (status === 401) {
+//       delete api.defaults.headers.common.Authorization;
+//       localStorage.removeItem("admin_token");
+//       alert("Session expired. Please login again.");
+//     }
+
+//     return Promise.reject(err);
+//   }
+// );
+
+// export default api;

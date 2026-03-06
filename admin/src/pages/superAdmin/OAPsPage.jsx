@@ -1,10 +1,5 @@
-import React, { useEffect, useState, useRef } from "react";
-// import OAPsAp, { OapApi } from "../../api/api"; 
+import React, { useEffect, useState, useRef } from "react"; 
 import api from "../../api/api";
-
-
-// Required: Tailwind CSS in your project.
-// Usage: Place this component under admin/src/pages/OAPsPage.jsx and import into your admin routes.
 
 export default function OAPsPage() {
   const [oaps, setOaps] = useState([]);

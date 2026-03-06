@@ -15,6 +15,7 @@ export default function SideBar() {
       <NavLink to="/superAdmin/schedules" className={active}>Schedule</NavLink>
       <NavLink to="/superAdmin/episodes" className={active}>Episodes</NavLink>
       <NavLink to="/superAdmin/sponsors" className={active}>Sponsors</NavLink>
+      <NavLink to="/superAdmin/newsblog" className={active}>News & Blog</NavLink>
       <NavLink to="/superAdmin/activitylog" className={active}>Activity Log</NavLink>
       <NavLink to="/superAdmin/settings" className={active}>Settings</NavLink>
     </nav>

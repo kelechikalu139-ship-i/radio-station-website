@@ -2,8 +2,7 @@
 import React, { useState } from "react";
 import { useAuth } from "../../context/AuthContext";
 
-import ConfirmLogoutModal from "./ConfirmLogoutModal"; // adjust path if necessary
-
+import ConfirmLogoutModal from "./ConfirmLogoutModal"; 
 export default function AdminHeader() {
   const { admin, logout } = useAuth();
   const [open, setOpen] = useState(false);
