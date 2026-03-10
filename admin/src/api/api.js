@@ -1,7 +1,3 @@
-
-
-
-
 // // admin/src/api.js
 import axios from "axios";
 
@@ -52,6 +48,8 @@ api.interceptors.response.use(
 );
 
 export default api;
+
+
 
 
 // admin/src/api.js

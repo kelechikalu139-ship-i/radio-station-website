@@ -18,6 +18,4 @@ export const OapApi = axios.create({
 
 export default api;
 
-// const OapApi = axios.create({baseURL:process.env.REACT_APP_API_URL || "http://localhost:4000"});
 
-// export function

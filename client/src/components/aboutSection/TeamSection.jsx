@@ -2,7 +2,9 @@
 import { motion } from "framer-motion";
 import { Link } from "react-router-dom";
 import { Instagram } from "lucide-react";
-import oapsData from "../../../../shared/costants/oapData";
+import OAPsDisplay from "../oapsSection/OAPsDispaly";
+
+
 
 const owner = {
   name: "Umar Kolo",
@@ -14,7 +16,7 @@ const owner = {
 
 const management = [
   {
-    name: "Mrs. Ada Okorie",
+    name: "Mrs. Maimuna Kolo",
     role: "Station Manager",
     photo: "/images/team/station_manager.jpeg"
   },
@@ -84,7 +86,7 @@ export default function TeamSection() {
           On-Air Personalities
         </h3>
 
-        <div className="grid sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6">
+        {/* <div className="grid sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6">
           {oapsData.map((o) => (
             <motion.article
               key={o.id}
@@ -120,6 +122,9 @@ export default function TeamSection() {
               </div>
             </motion.article>
           ))}
+        </div> */}
+        <div>
+          <OAPsDisplay/>
         </div>
       </div>
     </section>
