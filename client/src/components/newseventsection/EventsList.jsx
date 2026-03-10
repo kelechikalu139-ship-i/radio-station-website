@@ -1,12 +1,9 @@
-
-
-
-// src/pages/NewsEvent.jsx   (or wherever your detail page lives)
+// src/pages/NewsEvent.jsx   
 import { useEffect, useState } from 'react';
 import { useParams, Link } from 'react-router-dom';
-import api from '../../api/api';  // adjust path if needed
+import api from '../../api/api';  
 
-export default function NewsEvent() {
+export default function EventsList() {
   const { id } = useParams(); // gets the :id from URL → /newsevent/123
 
   const [item, setItem] = useState(null);

@@ -2,7 +2,7 @@ import React from 'react'
 import NewsHero from '../components/newseventsection/NewsHero'
 import FeaturedNews from '../components/newseventsection/FeaturedNews'
 import NewsList from '../components/newseventsection/NewsList'
-import EventsList from '../components/newseventsection/eventsList'
+import EventsList from '../components/newseventsection/EventsList'
 import NowPlayingCard from '../components/homeSection/NowPlayingCard'
 
 const NewsEventPage = () => {
