@@ -136,7 +136,7 @@ export default function NewsEvent() {
             <img
               src={item.image_url}
               alt={item.title}
-              className="w-full h-auto object-cover max-h-[600px]"
+              className="w-full h-auto object-cover max-h-150"
               loading="lazy"
             />
           </div>
