@@ -908,7 +908,7 @@
 //   return ctx;
 // }
 
-
+// src/context/AudioContext.jsx
 import React, {
   createContext,
   useContext,
@@ -928,12 +928,10 @@ export function AudioProvider({
 }) {
   const audioRef = useRef(null);
   const reconnectTimer = useRef(null);
-  const retryCount = useRef(0);
 
   const [playing, setPlaying] = useState(false);
   const [volume, setVolumeState] = useState(0.8);
   const [connectionState, setConnectionState] = useState('idle');
-  const [corsError, setCorsError] = useState(false);
   const [nowPlaying, setNowPlaying] = useState({
     title: "Nexter FM Live",
     artist: "On Air",
@@ -941,35 +939,23 @@ export function AudioProvider({
     listeners: 0,
   });
 
-  // Debug log
-  useEffect(() => {
-    console.log("🎵 AudioProvider mounted with:", {
-      streamUrl,
-      nowPlayingUrl
-    });
-  }, []);
-
   const attachSource = useCallback(() => {
     const audio = audioRef.current;
     if (!audio || !streamUrl) return;
 
-    console.log("🔊 Attaching source:", streamUrl);
+    console.log("🎵 Connecting to:", streamUrl);
     
-    try {
-      // Add timestamp to prevent caching
-      const url = new URL(streamUrl);
-      url.searchParams.append('_', Date.now());
-      
-      audio.src = url.toString();
-      audio.crossOrigin = "anonymous";
-      audio.preload = "none";
-      audio.volume = volume;
-      
-      setConnectionState('connecting');
-      audio.load();
-    } catch (err) {
-      console.error("Error setting source:", err);
-    }
+    // Add timestamp to prevent caching
+    const url = new URL(streamUrl);
+    url.searchParams.append('_', Date.now());
+    
+    audio.src = url.toString();
+    audio.crossOrigin = "anonymous";
+    audio.preload = "none";
+    audio.volume = volume;
+    
+    setConnectionState('connecting');
+    audio.load();
   }, [streamUrl, volume]);
 
   const play = useCallback(async () => {
@@ -982,26 +968,20 @@ export function AudioProvider({
         await new Promise(resolve => setTimeout(resolve, 500));
       }
       
-      console.log("▶️ Attempting to play...");
+      console.log("▶️ Starting playback...");
       await audio.play();
       console.log("✅ Playback started");
       setPlaying(true);
       setConnectionState('connected');
-      retryCount.current = 0;
-      setCorsError(false);
     } catch (err) {
       console.warn("❌ Play failed:", err.message);
       setConnectionState('error');
       
-      if (err.message.includes('CORS') || err.message.includes('cross-origin')) {
-        setCorsError(true);
-        console.log("CORS issue detected - you may need a proxy");
-      }
-      
-      if (retryCount.current < 3) {
-        retryCount.current++;
-        setTimeout(() => play(), 3000);
-      }
+      // Retry logic
+      setTimeout(() => {
+        attachSource();
+        play();
+      }, 3000);
     }
   }, [attachSource]);
 
@@ -1021,77 +1001,29 @@ export function AudioProvider({
     if (audioRef.current) audioRef.current.volume = value;
   }, []);
 
-  const scheduleReconnect = useCallback(() => {
-    if (reconnectTimer.current || !playing) return;
-
-    reconnectTimer.current = setTimeout(() => {
-      reconnectTimer.current = null;
-      attachSource();
-      play();
-    }, 3000);
-  }, [attachSource, play, playing]);
-
-  // Audio event listeners
-  useEffect(() => {
-    const audio = audioRef.current;
-    if (!audio) return;
-
-    const onPlay = () => {
-      setPlaying(true);
-      setConnectionState('connected');
-    };
-    
-    const onPause = () => setPlaying(false);
-    const onError = () => scheduleReconnect();
-    const onWaiting = () => setConnectionState('buffering');
-    const onCanPlay = () => setConnectionState('connected');
-
-    audio.addEventListener("play", onPlay);
-    audio.addEventListener("pause", onPause);
-    audio.addEventListener("error", onError);
-    audio.addEventListener("waiting", onWaiting);
-    audio.addEventListener("canplay", onCanPlay);
-
-    return () => {
-      audio.removeEventListener("play", onPlay);
-      audio.removeEventListener("pause", onPause);
-      audio.removeEventListener("error", onError);
-      audio.removeEventListener("waiting", onWaiting);
-      audio.removeEventListener("canplay", onCanPlay);
-      
-      if (reconnectTimer.current) {
-        clearTimeout(reconnectTimer.current);
-      }
-    };
-  }, [scheduleReconnect]);
-
-  // Now playing with CORS fallback
+  // Now playing via proxy
   useEffect(() => {
     if (!nowPlayingUrl) return;
 
     const fetchNowPlaying = async () => {
       try {
-        // Try direct fetch first
         const url = new URL(nowPlayingUrl);
         url.searchParams.append('_', Date.now());
         
         const res = await fetch(url.toString(), { 
           cache: "no-store",
-          mode: 'cors',
           headers: {
             'Accept': 'application/json',
           }
         });
         
-        if (!res.ok) {
-          throw new Error(`HTTP ${res.status}`);
-        }
+        if (!res.ok) return;
         
-        const json = await res.json();
-        console.log("Got Icecast data:", json);
+        const data = await res.json();
+        console.log("Now playing data:", data);
         
-        // Process the data (your existing code)
-        const source = json?.icestats?.source;
+        // Extract data based on response structure
+        const source = data?.icestats?.source;
         const mainSource = Array.isArray(source) ? source[0] : source;
         
         if (mainSource) {
@@ -1115,29 +1047,7 @@ export function AudioProvider({
           });
         }
       } catch (err) {
-        console.log("Direct fetch failed, trying CORS proxy...");
-        
-        // Try with CORS proxy as fallback
-        try {
-          const proxyUrl = `https://api.allorigins.win/raw?url=${encodeURIComponent(nowPlayingUrl)}`;
-          const proxyRes = await fetch(proxyUrl);
-          const json = await proxyRes.json();
-          
-          // Process same as above
-          const source = json?.icestats?.source;
-          const mainSource = Array.isArray(source) ? source[0] : source;
-          
-          if (mainSource) {
-            setNowPlaying({
-              title: mainSource.title || "Live Broadcast",
-              artist: "Nexter FM",
-              show: mainSource.server_name || "On Air",
-              listeners: mainSource.listeners || 0,
-            });
-          }
-        } catch (proxyErr) {
-          console.debug("Proxy fetch also failed:", proxyErr.message);
-        }
+        console.debug("Now-playing fetch failed:", err.message);
       }
     };
 
@@ -1151,10 +1061,32 @@ export function AudioProvider({
     attachSource();
   }, [attachSource]);
 
+  useEffect(() => {
+    const audio = audioRef.current;
+    if (!audio) return;
+
+    const onError = () => {
+      console.log("Audio error - reconnecting");
+      scheduleReconnect();
+    };
+
+    audio.addEventListener("error", onError);
+    return () => audio.removeEventListener("error", onError);
+  }, []);
+
+  const scheduleReconnect = useCallback(() => {
+    if (reconnectTimer.current) return;
+
+    reconnectTimer.current = setTimeout(() => {
+      reconnectTimer.current = null;
+      attachSource();
+      if (playing) play();
+    }, 3000);
+  }, [attachSource, play, playing]);
+
   return (
     <AudioContext.Provider
       value={{
-        audioRef,
         playing,
         play,
         pause,
@@ -1163,8 +1095,6 @@ export function AudioProvider({
         setVolume,
         nowPlaying,
         connectionState,
-        corsError,
-        streamUrl,
       }}
     >
       {children}
