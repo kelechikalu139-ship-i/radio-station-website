@@ -398,8 +398,9 @@
 //   return ctx;
 // }
 
+// for CasterFm 
 
-
+// src/context/AudioContext.jsx
 import React, {
   createContext,
   useContext,
@@ -413,9 +414,8 @@ const AudioContext = createContext(null);
 
 export function AudioProvider({
   children,
-  // Use env vars with fallback to hardcoded values for testing
-  streamUrl = import.meta.env.VITE_STREAM_URL || "http://sapircast.caster.fm:8000/u2ceg",
-  nowPlayingUrl = import.meta.env.VITE_NOWPLAYING_URL || "http://sapircast.caster.fm:8000/status-json.xsl",
+  streamUrl = import.meta.env.VITE_STREAM_URL,
+  nowPlayingUrl = import.meta.env.VITE_NOWPLAYING_URL, 
   nowPlayingPollMs = 10000,
 }) {
   const audioRef = useRef(null);
@@ -432,80 +432,53 @@ export function AudioProvider({
     listeners: 0,
   });
 
-  // Debug log
-  useEffect(() => {
-    console.log("🎵 AudioProvider mounted with:", {
-      streamUrl,
-      nowPlayingUrl,
-      envStream: import.meta.env.VITE_STREAM_URL,
-      envNow: import.meta.env.VITE_NOWPLAYING_URL
-    });
-  }, []);
-
+  /* ---------------------------
+     AUDIO SOURCE ATTACHMENT
+  ---------------------------- */
   const attachSource = useCallback(() => {
     const audio = audioRef.current;
-    if (!audio || !streamUrl) {
-      console.error("No audio element or stream URL");
-      return;
-    }
+    if (!audio || !streamUrl) return;
 
-    console.log("🔊 Attaching source:", streamUrl);
+    console.log("Connecting to stream:", streamUrl);
     
-    try {
-      // Ensure URL is properly formatted
-      let urlString = streamUrl;
-      if (!urlString.startsWith('http')) {
-        urlString = 'http://' + urlString;
-      }
-      
-      // Add cache busting
-      const url = new URL(urlString);
-      url.searchParams.append('_', Date.now());
-      
-      audio.src = url.toString();
-      audio.crossOrigin = "anonymous";
-      audio.preload = "none";
-      audio.volume = volume;
-      
-      setConnectionState('connecting');
-      audio.load();
-      console.log("✅ Audio source set to:", audio.src);
-    } catch (err) {
-      console.error("❌ Error setting audio source:", err);
-      setConnectionState('error');
-    }
+    // Add cache busting (use set to avoid duplicate params)
+    const url = new URL(streamUrl);
+    url.searchParams.set('_', Date.now().toString());
+    
+    audio.src = url.toString();
+    audio.crossOrigin = "anonymous";
+    audio.preload = "auto";           // Better for buffering on most browsers
+    audio.volume = volume;
+    
+    setConnectionState('connecting');
+    audio.load();
   }, [streamUrl, volume]);
 
+  /* ---------------------------
+     PLAY / PAUSE CONTROLS
+  ---------------------------- */
   const play = useCallback(async () => {
     const audio = audioRef.current;
-    if (!audio) {
-      console.error("No audio element");
-      return;
-    }
+    if (!audio) return;
 
     try {
       if (!audio.src) {
         attachSource();
-        await new Promise(resolve => setTimeout(resolve, 500));
+        await new Promise(resolve => setTimeout(resolve, 100));
       }
       
-      console.log("▶️ Attempting to play...");
-      const playPromise = audio.play();
-      
-      if (playPromise !== undefined) {
-        await playPromise;
-        console.log("✅ Playback started");
-        setPlaying(true);
-        setConnectionState('connected');
-        retryCount.current = 0;
-      }
+      await audio.play();
+      setPlaying(true);
+      setConnectionState('connected');
+      retryCount.current = 0;
+      console.log("Stream connected successfully!");
     } catch (err) {
-      console.warn("❌ Play failed:", err.message);
+      console.warn("Play failed:", err);
       setConnectionState('error');
       
+      // Retry logic (up to 3 attempts)
       if (retryCount.current < 3) {
         retryCount.current++;
-        console.log(`Retry ${retryCount.current}/3...`);
         setTimeout(() => play(), 3000);
       }
     }
@@ -521,16 +494,22 @@ export function AudioProvider({
     playing ? pause() : play();
   }, [playing, play, pause]);
 
+  /* ---------------------------
+     VOLUME CONTROL
+  ---------------------------- */
   const setVolume = useCallback((v) => {
     const value = Math.min(1, Math.max(0, Number(v)));
     setVolumeState(value);
     if (audioRef.current) audioRef.current.volume = value;
   }, []);
 
+  /* ---------------------------
+     RECONNECT LOGIC
+  ---------------------------- */
   const scheduleReconnect = useCallback(() => {
     if (reconnectTimer.current || !playing) return;
 
-    console.log("🔄 Scheduling reconnect...");
+    console.log("Scheduling reconnect...");
     setConnectionState('reconnecting');
 
     reconnectTimer.current = setTimeout(() => {
@@ -540,37 +519,31 @@ export function AudioProvider({
     }, 3000);
   }, [attachSource, play, playing]);
 
+  /* ---------------------------
+     AUDIO EVENTS
+  ---------------------------- */
   useEffect(() => {
     const audio = audioRef.current;
     if (!audio) return;
 
     const onPlay = () => {
-      console.log("🎵 Audio event: play");
       setPlaying(true);
       setConnectionState('connected');
     };
     
     const onPause = () => {
-      console.log("⏸️ Audio event: pause");
       setPlaying(false);
       setConnectionState('idle');
     };
     
     const onError = (e) => {
-      console.warn("⚠️ Audio event: error", e);
+      console.warn("Audio error:", e);
       setConnectionState('error');
       scheduleReconnect();
     };
     
-    const onWaiting = () => {
-      console.log("⏳ Audio event: waiting");
-      setConnectionState('buffering');
-    };
-    
-    const onCanPlay = () => {
-      console.log("✅ Audio event: canplay");
-      setConnectionState('connected');
-    };
+    const onWaiting = () => setConnectionState('buffering');
+    const onCanPlay = () => setConnectionState('connected');
 
     audio.addEventListener("play", onPlay);
     audio.addEventListener("pause", onPause);
@@ -591,50 +564,87 @@ export function AudioProvider({
     };
   }, [scheduleReconnect]);
 
+  /* ---------------------------
+     NOW PLAYING (ICECAST) - with 503/off-air handling
+  ---------------------------- */
   useEffect(() => {
     if (!nowPlayingUrl) return;
 
     const fetchNowPlaying = async () => {
       try {
+        // Add timestamp to prevent caching
         const url = new URL(nowPlayingUrl);
-        url.searchParams.append('_', Date.now());
-        
+        url.searchParams.set('_', Date.now().toString());
+
         const res = await fetch(url.toString(), { 
           cache: "no-store",
           mode: 'cors',
           headers: {
-            'Cache-Control': 'no-cache',
+            'Cache-Control': 'no-cache, no-store',
+            'Pragma': 'no-cache'
           }
         });
-        
-        if (!res.ok) return;
+
+        // Special handling for 503 → common on Caster.fm when no broadcast is live
+        if (res.status === 503) {
+          console.debug("503 received – likely no source connected (off-air)");
+          setNowPlaying({
+            title: "Offline",
+            artist: "No Broadcast",
+            show: "Connect BUTT to go live",
+            listeners: 0,
+          });
+          return;
+        }
+
+        if (!res.ok) {
+          throw new Error(`HTTP error! status: ${res.status}`);
+        }
         
         const json = await res.json();
+        console.log("Icecast stats received");
+
+        // Handle Icecast JSON structure
         const source = json?.icestats?.source;
         const mainSource = Array.isArray(source) ? source[0] : source;
         
         if (mainSource) {
+          // Parse title (often "Artist - Title" format)
           const titleStr = mainSource.title || "";
           let artist = "Nexter FM";
           let title = "Live Broadcast";
           
           if (titleStr.includes(' - ')) {
             const parts = titleStr.split(' - ');
-            artist = parts[0];
-            title = parts[1];
-          } else if (titleStr) {
-            title = titleStr;
+            artist = parts[0]?.trim() || artist;
+            title = parts[1]?.trim() || title;
+          } else if (titleStr.trim()) {
+            title = titleStr.trim();
           }
           
           setNowPlaying({
             title,
             artist,
-            show: mainSource.server_name || "Nexter FM",
-            listeners: mainSource.listeners || 0,
+            show: mainSource.server_name || mainSource.server_description || "Nexter FM",
+            listeners: Number(mainSource.listeners) || 0,
+          });
+        } else {
+          // No active source found in JSON
+          setNowPlaying({
+            title: "No Track Info",
+            artist: "",
+            show: "Live but no metadata",
+            listeners: Number(mainSource?.listeners) || 0,
           });
         }
       } catch (err) {
         console.debug("Now-playing fetch failed:", err.message);
+        setNowPlaying({
+          title: "Error",
+          artist: "",
+          show: "Stats unavailable",
+          listeners: 0,
+        });
       }
     };
 
@@ -644,12 +654,18 @@ export function AudioProvider({
     return () => clearInterval(id);
   }, [nowPlayingUrl, nowPlayingPollMs]);
 
+  /* ---------------------------
+     INITIAL SETUP
+  ---------------------------- */
   useEffect(() => {
     if (streamUrl) {
       attachSource();
     }
   }, [attachSource, streamUrl]);
 
+  /* ---------------------------
+     PROVIDER
+  ---------------------------- */
   return (
     <AudioContext.Provider
       value={{
