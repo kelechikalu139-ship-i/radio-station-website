@@ -210,3 +210,62 @@ process.on("uncaughtException", (err) => {
   console.error("Uncaught Exception:", err);
   process.exit(1);
 });
+
+
+// ============================================
+// RADIO STREAM PROXY (Add this to your server.js)
+// ============================================
+import fetch from 'node-fetch'; // Add this at top with other imports
+
+// Radio proxy endpoint
+app.get('/api/radio-proxy', async (req, res) => {
+  const { type } = req.query;
+  const password = 'vmGoixyJlm'; // 🔴 REPLACE WITH YOUR ACTUAL PASSWORD
+  
+  // Enable CORS for your frontend
+  res.setHeader('Access-Control-Allow-Origin', 'https://radio-station-website-client.onrender.com');
+  res.setHeader('Access-Control-Allow-Methods', 'GET, OPTIONS');
+  
+  // Handle preflight
+  if (req.method === 'OPTIONS') {
+    res.status(200).end();
+    return;
+  }
+
+  try {
+    if (type === 'stream') {
+      // Stream endpoint with authentication
+      const streamUrl = `https://source:${password}@sapircast.caster.fm:17962/u2ceg`;
+      console.log('Proxying stream request');
+      
+      const response = await fetch(streamUrl);
+      
+      if (!response.ok) {
+        console.error('Stream fetch failed:', response.status);
+        return res.status(response.status).end();
+      }
+      
+      // Set correct headers for audio streaming
+      res.setHeader('Content-Type', 'audio/mpeg');
+      res.setHeader('Transfer-Encoding', 'chunked');
+      
+      // Pipe the stream
+      response.body.pipe(res);
+    } 
+    else if (type === 'status') {
+      // Status endpoint
+      const statusUrl = 'https://sapircast.caster.fm:17962/status-json.xsl';
+      console.log('Fetching status');
+      
+      const response = await fetch(statusUrl);
+      const data = await response.json();
+      
+      res.json(data);
+    } else {
+      res.status(400).json({ error: 'Invalid type parameter' });
+    }
+  } catch (error) {
+    console.error('Proxy error:', error);
+    res.status(500).json({ error: 'Proxy failed' });
+  }
+});
