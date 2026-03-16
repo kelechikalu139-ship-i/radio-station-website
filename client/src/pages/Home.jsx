@@ -10,7 +10,7 @@ import NowPlayingCard from '../components/homeSection/NowPlayingCard'
 import OnAirOAP from '../components/homeSection/OnAirOAP'
 import NewsAndEventsSection from '../components/homeSection/NewsAndEventsSection'
 import RadioVideoSection from '../components/homeSection/RadioVideoSection'
-import RadioPlayer from '../components/homeSection/RadioPlayer'
+// import RadioPlayer from '../components/homeSection/RadioPlayer'
 // import NewsEventPage from './NewsEventPage'
 
 const Home = () => {
@@ -24,7 +24,7 @@ const Home = () => {
         <LatestEpisodes/>
         <NewsletterCTA/>
         <Testimonials/>
-        <RadioPlayer/>
+        {/* <RadioPlayer/> */}
         {/* <SponsorsCarousel/> */}
         {/* <NewsEventPage/> */}
         <StickyListenButton/>
