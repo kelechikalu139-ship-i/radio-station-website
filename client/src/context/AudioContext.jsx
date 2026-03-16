@@ -693,8 +693,6 @@
 //   return ctx;
 // }
 
-
-// allow CORS 
 // src/context/AudioContext.jsx
 import React, {
   createContext,
@@ -735,7 +733,6 @@ export function AudioProvider({
     if (!audio || !streamUrl) return;
 
     console.log("Connecting to stream:", streamUrl);
-    
     const url = new URL(streamUrl);
     url.searchParams.set('_', Date.now().toString());
     
@@ -760,16 +757,14 @@ export function AudioProvider({
         attachSource();
         await new Promise(resolve => setTimeout(resolve, 100));
       }
-      
       await audio.play();
       setPlaying(true);
       setConnectionState('connected');
       retryCount.current = 0;
-      console.log("Stream connected successfully!");
+      console.log("✅ Stream connected successfully!");
     } catch (err) {
       console.warn("Play failed:", err);
       setConnectionState('error');
-      
       if (retryCount.current < 3) {
         retryCount.current++;
         setTimeout(() => play(), 3000);
@@ -794,14 +789,11 @@ export function AudioProvider({
   }, []);
 
   /* ---------------------------
-     RECONNECT LOGIC
+     RECONNECT & EVENTS
   ---------------------------- */
   const scheduleReconnect = useCallback(() => {
     if (reconnectTimer.current || !playing) return;
-
-    console.log("Scheduling reconnect...");
     setConnectionState('reconnecting');
-
     reconnectTimer.current = setTimeout(() => {
       reconnectTimer.current = null;
       attachSource();
@@ -809,9 +801,6 @@ export function AudioProvider({
     }, 3000);
   }, [attachSource, play, playing]);
 
-  /* ---------------------------
-     AUDIO EVENTS
-  ---------------------------- */
   useEffect(() => {
     const audio = audioRef.current;
     if (!audio) return;
@@ -843,32 +832,27 @@ export function AudioProvider({
   }, [scheduleReconnect]);
 
   /* ---------------------------
-     NOW PLAYING (FIXED – NO CUSTOM HEADERS)
+     NOW PLAYING – FIXED WITH CORS PROXY
   ---------------------------- */
   useEffect(() => {
     if (!nowPlayingUrl) return;
 
     const fetchNowPlaying = async () => {
       try {
-        const url = new URL(nowPlayingUrl);
+        // Use public CORS proxy (bypasses Caster.fm header block)
+        const proxiedUrl = `https://corsproxy.io/?${encodeURIComponent(nowPlayingUrl)}`;
+        const url = new URL(proxiedUrl);
         url.searchParams.set('_', Date.now().toString());
 
         const res = await fetch(url.toString(), { 
-          cache: "no-store",
           mode: 'cors'
-          // ← Removed Cache-Control/Pragma because Caster.fm blocks them
+          // NO cache, NO Cache-Control — this fixes the preflight error
         });
-
-        if (res.status === 503) {
-          console.debug("503 – server off-air");
-          setNowPlaying({ title: "Offline", artist: "No Broadcast", show: "Connect BUTT", listeners: 0 });
-          return;
-        }
 
         if (!res.ok) throw new Error(`HTTP ${res.status}`);
 
         const json = await res.json();
-        console.log("Icecast stats received");
+        console.log("✅ Icecast stats received via proxy");
 
         const source = json?.icestats?.source;
         const mainSource = Array.isArray(source) ? source[0] : source;
@@ -894,7 +878,7 @@ export function AudioProvider({
           });
         }
       } catch (err) {
-        console.debug("Now-playing fetch failed:", err.message);
+        console.debug("Now-playing fetch failed (proxy):", err.message);
       }
     };
 
