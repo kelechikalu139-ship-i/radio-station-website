@@ -922,12 +922,18 @@ const AudioContext = createContext(null);
 
 export function AudioProvider({
   children,
+  // Sternhost/AzuraCast configuration
   streamUrl = import.meta.env.VITE_STREAM_URL,
-  nowPlayingUrl = import.meta.env.VITE_NOWPLAYING_URL,
-  nowPlayingPollMs = 10000,
+  streamMount = import.meta.env.VITE_STREAM_MOUNT || "/radio.mp3",
+  apiUrl = import.meta.env.VITE_AZURACAST_API_URL,
+  apiKey = import.meta.env.VITE_AZURACAST_API_KEY,
+  stationId = import.meta.env.VITE_STATION_ID || "1149",
+  nowPlayingPollMs = import.meta.env.VITE_NOWPLAYING_POLL_MS || 10000,
 }) {
   const audioRef = useRef(null);
   const reconnectTimer = useRef(null);
+  const reconnectAttempts = useRef(0);
+  const maxReconnectAttempts = 5;
 
   const [playing, setPlaying] = useState(false);
   const [volume, setVolumeState] = useState(0.8);
@@ -937,26 +943,46 @@ export function AudioProvider({
     artist: "On Air",
     show: "24/7 Broadcast",
     listeners: 0,
+    songHistory: [],
   });
+
+  // Build full stream URL - direct Sternhost URL
+  const getFullStreamUrl = useCallback(() => {
+    if (!streamUrl) return null;
+    
+    // Remove trailing slash if present
+    const baseUrl = streamUrl.replace(/\/$/, '');
+    
+    // Add timestamp to prevent caching
+    const url = new URL(`${baseUrl}${streamMount}`);
+    url.searchParams.append('_', Date.now());
+    
+    return url.toString();
+  }, [streamUrl, streamMount]);
 
   const attachSource = useCallback(() => {
     const audio = audioRef.current;
-    if (!audio || !streamUrl) return;
+    const fullStreamUrl = getFullStreamUrl();
+    
+    if (!audio || !fullStreamUrl) return;
 
-    console.log("🎵 Connecting to:", streamUrl);
+    console.log("🎵 Connecting to Sternhost:", fullStreamUrl);
     
-    // Add timestamp to prevent caching
-    const url = new URL(streamUrl);
-    url.searchParams.append('_', Date.now());
+    // Clear any existing source
+    audio.pause();
+    audio.removeAttribute('src');
+    audio.load();
     
-    audio.src = url.toString();
+    // Set new source
+    audio.src = fullStreamUrl;
     audio.crossOrigin = "anonymous";
     audio.preload = "none";
     audio.volume = volume;
     
     setConnectionState('connecting');
-    audio.load();
-  }, [streamUrl, volume]);
+    reconnectAttempts.current = 0;
+    
+  }, [getFullStreamUrl, volume]);
 
   const play = useCallback(async () => {
     const audio = audioRef.current;
@@ -965,30 +991,51 @@ export function AudioProvider({
     try {
       if (!audio.src) {
         attachSource();
-        await new Promise(resolve => setTimeout(resolve, 500));
+        await new Promise(resolve => setTimeout(resolve, 300));
       }
       
       console.log("▶️ Starting playback...");
-      await audio.play();
-      console.log("✅ Playback started");
-      setPlaying(true);
-      setConnectionState('connected');
+      
+      const playPromise = audio.play();
+      
+      if (playPromise !== undefined) {
+        await playPromise;
+        console.log("✅ Playback started successfully");
+        setPlaying(true);
+        setConnectionState('connected');
+        reconnectAttempts.current = 0;
+      }
     } catch (err) {
       console.warn("❌ Play failed:", err.message);
       setConnectionState('error');
+      setPlaying(false);
       
-      // Retry logic
-      setTimeout(() => {
-        attachSource();
-        play();
-      }, 3000);
+      // Retry logic with exponential backoff
+      if (reconnectAttempts.current < maxReconnectAttempts) {
+        reconnectAttempts.current++;
+        const delay = Math.min(1000 * Math.pow(2, reconnectAttempts.current), 30000);
+        
+        console.log(`Retry attempt ${reconnectAttempts.current}/${maxReconnectAttempts} in ${delay}ms`);
+        
+        setTimeout(() => {
+          attachSource();
+          play();
+        }, delay);
+      } else {
+        console.log("Max reconnect attempts reached");
+        setConnectionState('disconnected');
+      }
     }
   }, [attachSource]);
 
   const pause = useCallback(() => {
-    audioRef.current?.pause();
+    const audio = audioRef.current;
+    if (audio) {
+      audio.pause();
+    }
     setPlaying(false);
     setConnectionState('idle');
+    reconnectAttempts.current = 0;
   }, []);
 
   const toggle = useCallback(() => {
@@ -998,56 +1045,65 @@ export function AudioProvider({
   const setVolume = useCallback((v) => {
     const value = Math.min(1, Math.max(0, Number(v)));
     setVolumeState(value);
-    if (audioRef.current) audioRef.current.volume = value;
+    if (audioRef.current) {
+      audioRef.current.volume = value;
+    }
   }, []);
 
-  // Now playing via proxy
+  // Fetch now playing from Sternhost/AzuraCast
   useEffect(() => {
-    if (!nowPlayingUrl) return;
+    if (!apiUrl || !stationId) return;
 
     const fetchNowPlaying = async () => {
       try {
-        const url = new URL(nowPlayingUrl);
-        url.searchParams.append('_', Date.now());
+        // Try AzuraCast API first
+        const npUrl = `${apiUrl}/api/nowplaying/${stationId}`;
         
-        const res = await fetch(url.toString(), { 
-          cache: "no-store",
-          headers: {
-            'Accept': 'application/json',
-          }
+        const res = await fetch(npUrl, {
+          headers: apiKey ? { 'X-API-Key': apiKey } : {},
+          cache: 'no-store'
         });
         
-        if (!res.ok) return;
+        if (!res.ok) {
+          throw new Error(`API returned ${res.status}`);
+        }
         
         const data = await res.json();
-        console.log("Now playing data:", data);
+        console.log("Sternhost now playing:", data);
         
-        // Extract data based on response structure
-        const source = data?.icestats?.source;
-        const mainSource = Array.isArray(source) ? source[0] : source;
+        const nowPlaying = data.now_playing || {};
+        const song = nowPlaying.song || {};
+        const listeners = data.listeners || {};
+        const station = data.station || {};
         
-        if (mainSource) {
-          const titleStr = mainSource.title || "";
-          let artist = "Nexter FM";
-          let title = "Live Broadcast";
-          
-          if (titleStr.includes(' - ')) {
-            const parts = titleStr.split(' - ');
-            artist = parts[0];
-            title = parts[1];
-          } else if (titleStr) {
-            title = titleStr;
-          }
-          
-          setNowPlaying({
-            title,
-            artist,
-            show: mainSource.server_name || "Nexter FM",
-            listeners: mainSource.listeners || 0,
-          });
-        }
+        setNowPlaying({
+          title: song.title || "Live Broadcast",
+          artist: song.artist || "Nexter FM",
+          show: station.name || "Nexter FM",
+          listeners: listeners.current || 0,
+          songHistory: (data.song_history || []).slice(0, 5).map(item => ({
+            title: item.song?.title || "Unknown",
+            artist: item.song?.artist || "Unknown",
+            played_at: item.played_at,
+          })),
+        });
+        
       } catch (err) {
         console.debug("Now-playing fetch failed:", err.message);
+        
+        // Fallback to public status page
+        try {
+          const publicUrl = `https://radio.sternhost.com/public/station_${stationId}_1773756634/status`;
+          const fallbackRes = await fetch(publicUrl);
+          
+          if (fallbackRes.ok) {
+            const html = await fallbackRes.text();
+            // Parse basic info from HTML (you might want a better parsing method)
+            console.log("Got fallback status");
+          }
+        } catch (e) {
+          // Keep existing now playing data
+        }
       }
     };
 
@@ -1055,33 +1111,54 @@ export function AudioProvider({
     const id = setInterval(fetchNowPlaying, nowPlayingPollMs);
 
     return () => clearInterval(id);
-  }, [nowPlayingUrl, nowPlayingPollMs]);
+  }, [apiUrl, apiKey, stationId, nowPlayingPollMs]);
 
-  useEffect(() => {
-    attachSource();
-  }, [attachSource]);
-
+  // Audio event listeners
   useEffect(() => {
     const audio = audioRef.current;
     if (!audio) return;
 
-    const onError = () => {
-      console.log("Audio error - reconnecting");
-      scheduleReconnect();
+    const handlers = {
+      play: () => {
+        setPlaying(true);
+        setConnectionState('connected');
+      },
+      pause: () => {
+        setPlaying(false);
+        setConnectionState('idle');
+      },
+      waiting: () => setConnectionState('buffering'),
+      playing: () => setConnectionState('connected'),
+      stalled: () => setConnectionState('stalled'),
+      error: () => {
+        setConnectionState('error');
+        if (playing) {
+          setTimeout(() => {
+            attachSource();
+            play();
+          }, 3000);
+        }
+      },
+      ended: () => {
+        setConnectionState('ended');
+        if (playing) {
+          setTimeout(() => {
+            attachSource();
+            play();
+          }, 2000);
+        }
+      }
     };
 
-    audio.addEventListener("error", onError);
-    return () => audio.removeEventListener("error", onError);
-  }, []);
+    Object.entries(handlers).forEach(([event, handler]) => {
+      audio.addEventListener(event, handler);
+    });
 
-  const scheduleReconnect = useCallback(() => {
-    if (reconnectTimer.current) return;
-
-    reconnectTimer.current = setTimeout(() => {
-      reconnectTimer.current = null;
-      attachSource();
-      if (playing) play();
-    }, 3000);
+    return () => {
+      Object.entries(handlers).forEach(([event, handler]) => {
+        audio.removeEventListener(event, handler);
+      });
+    };
   }, [attachSource, play, playing]);
 
   return (
@@ -1098,7 +1175,7 @@ export function AudioProvider({
       }}
     >
       {children}
-      <audio ref={audioRef} />
+      <audio ref={audioRef} preload="none" />
     </AudioContext.Provider>
   );
 }
