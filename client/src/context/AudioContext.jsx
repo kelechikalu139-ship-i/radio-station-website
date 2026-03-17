@@ -922,12 +922,8 @@ const AudioContext = createContext(null);
 
 export function AudioProvider({
   children,
-  // Sternhost/AzuraCast configuration
   streamUrl = import.meta.env.VITE_STREAM_URL,
-  streamMount = import.meta.env.VITE_STREAM_MOUNT || "/radio.mp3",
-  apiUrl = import.meta.env.VITE_AZURACAST_API_URL,
-  apiKey = import.meta.env.VITE_AZURACAST_API_KEY,
-  stationId = import.meta.env.VITE_STATION_ID || "1149",
+  nowPlayingUrl = import.meta.env.VITE_NOWPLAYING_URL,
   nowPlayingPollMs = import.meta.env.VITE_NOWPLAYING_POLL_MS || 10000,
 }) {
   const audioRef = useRef(null);
@@ -944,29 +940,19 @@ export function AudioProvider({
     show: "24/7 Broadcast",
     listeners: 0,
     songHistory: [],
+    bitrate: 128,
+    listenerPeak: 0,
   });
-
-  // Build full stream URL - direct Sternhost URL
-  const getFullStreamUrl = useCallback(() => {
-    if (!streamUrl) return null;
-    
-    // Remove trailing slash if present
-    const baseUrl = streamUrl.replace(/\/$/, '');
-    
-    // Add timestamp to prevent caching
-    const url = new URL(`${baseUrl}${streamMount}`);
-    url.searchParams.append('_', Date.now());
-    
-    return url.toString();
-  }, [streamUrl, streamMount]);
 
   const attachSource = useCallback(() => {
     const audio = audioRef.current;
-    const fullStreamUrl = getFullStreamUrl();
-    
-    if (!audio || !fullStreamUrl) return;
+    if (!audio || !streamUrl) return;
 
-    console.log("🎵 Connecting to Sternhost:", fullStreamUrl);
+    console.log("🎵 Connecting via proxy to:", streamUrl);
+    
+    // Add timestamp to prevent caching
+    const url = new URL(streamUrl);
+    url.searchParams.append('_', Date.now());
     
     // Clear any existing source
     audio.pause();
@@ -974,7 +960,7 @@ export function AudioProvider({
     audio.load();
     
     // Set new source
-    audio.src = fullStreamUrl;
+    audio.src = url.toString();
     audio.crossOrigin = "anonymous";
     audio.preload = "none";
     audio.volume = volume;
@@ -982,7 +968,7 @@ export function AudioProvider({
     setConnectionState('connecting');
     reconnectAttempts.current = 0;
     
-  }, [getFullStreamUrl, volume]);
+  }, [streamUrl, volume]);
 
   const play = useCallback(async () => {
     const audio = audioRef.current;
@@ -991,6 +977,7 @@ export function AudioProvider({
     try {
       if (!audio.src) {
         attachSource();
+        // Wait a bit for the source to be set
         await new Promise(resolve => setTimeout(resolve, 300));
       }
       
@@ -1050,60 +1037,68 @@ export function AudioProvider({
     }
   }, []);
 
-  // Fetch now playing from Sternhost/AzuraCast
+  // Fetch now playing from your proxy
   useEffect(() => {
-    if (!apiUrl || !stationId) return;
+    if (!nowPlayingUrl) return;
 
     const fetchNowPlaying = async () => {
       try {
-        // Try AzuraCast API first
-        const npUrl = `${apiUrl}/api/nowplaying/${stationId}`;
+        const url = new URL(nowPlayingUrl);
+        url.searchParams.append('_', Date.now());
         
-        const res = await fetch(npUrl, {
-          headers: apiKey ? { 'X-API-Key': apiKey } : {},
-          cache: 'no-store'
+        const res = await fetch(url.toString(), {
+          cache: 'no-store',
+          headers: {
+            'Accept': 'application/json',
+          }
         });
         
         if (!res.ok) {
-          throw new Error(`API returned ${res.status}`);
+          throw new Error(`Proxy returned ${res.status}`);
         }
         
         const data = await res.json();
-        console.log("Sternhost now playing:", data);
+        console.log("Now playing data from proxy:", data);
         
+        // Extract data from AzuraCast response
         const nowPlaying = data.now_playing || {};
         const song = nowPlaying.song || {};
         const listeners = data.listeners || {};
         const station = data.station || {};
         
+        // Parse song title (handle "Artist - Title" format)
+        let title = song.title || "Live Broadcast";
+        let artist = song.artist || "Nexter FM";
+        
+        // If title contains " - ", split it (some streams send combined format)
+        if (title.includes(' - ') && !artist) {
+          const parts = title.split(' - ');
+          artist = parts[0];
+          title = parts[1];
+        }
+        
+        // Get song history (last 5 songs)
+        const songHistory = (data.song_history || []).slice(0, 5).map(item => ({
+          title: item.song?.title || "Unknown",
+          artist: item.song?.artist || "Unknown",
+          played_at: item.played_at,
+        }));
+        
         setNowPlaying({
-          title: song.title || "Live Broadcast",
-          artist: song.artist || "Nexter FM",
+          title,
+          artist,
           show: station.name || "Nexter FM",
           listeners: listeners.current || 0,
-          songHistory: (data.song_history || []).slice(0, 5).map(item => ({
-            title: item.song?.title || "Unknown",
-            artist: item.song?.artist || "Unknown",
-            played_at: item.played_at,
-          })),
+          listenerPeak: listeners.total || 0,
+          songHistory,
+          bitrate: nowPlaying.streamer?.bitrate || 128,
+          live: nowPlaying.is_live || false,
+          streamerName: nowPlaying.streamer?.name || null,
         });
         
       } catch (err) {
         console.debug("Now-playing fetch failed:", err.message);
-        
-        // Fallback to public status page
-        try {
-          const publicUrl = `https://radio.sternhost.com/public/station_${stationId}_1773756634/status`;
-          const fallbackRes = await fetch(publicUrl);
-          
-          if (fallbackRes.ok) {
-            const html = await fallbackRes.text();
-            // Parse basic info from HTML (you might want a better parsing method)
-            console.log("Got fallback status");
-          }
-        } catch (e) {
-          // Keep existing now playing data
-        }
+        // Don't update state on error - keep showing last known data
       }
     };
 
@@ -1111,7 +1106,7 @@ export function AudioProvider({
     const id = setInterval(fetchNowPlaying, nowPlayingPollMs);
 
     return () => clearInterval(id);
-  }, [apiUrl, apiKey, stationId, nowPlayingPollMs]);
+  }, [nowPlayingUrl, nowPlayingPollMs]);
 
   // Audio event listeners
   useEffect(() => {
@@ -1130,23 +1125,35 @@ export function AudioProvider({
       waiting: () => setConnectionState('buffering'),
       playing: () => setConnectionState('connected'),
       stalled: () => setConnectionState('stalled'),
-      error: () => {
+      error: (e) => {
+        console.error("Audio error:", e);
         setConnectionState('error');
         if (playing) {
-          setTimeout(() => {
+          // Clear any existing reconnect timer
+          if (reconnectTimer.current) {
+            clearTimeout(reconnectTimer.current);
+          }
+          // Schedule reconnect
+          reconnectTimer.current = setTimeout(() => {
             attachSource();
             play();
+            reconnectTimer.current = null;
           }, 3000);
         }
       },
       ended: () => {
+        console.log("Stream ended");
         setConnectionState('ended');
         if (playing) {
+          // Try to reconnect if it ended unexpectedly
           setTimeout(() => {
             attachSource();
             play();
           }, 2000);
         }
+      },
+      volumechange: () => {
+        setVolumeState(audio.volume);
       }
     };
 
@@ -1158,8 +1165,16 @@ export function AudioProvider({
       Object.entries(handlers).forEach(([event, handler]) => {
         audio.removeEventListener(event, handler);
       });
+      if (reconnectTimer.current) {
+        clearTimeout(reconnectTimer.current);
+      }
     };
   }, [attachSource, play, playing]);
+
+  // Initial source attachment
+  useEffect(() => {
+    attachSource();
+  }, [attachSource]);
 
   return (
     <AudioContext.Provider

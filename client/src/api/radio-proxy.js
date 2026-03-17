@@ -1,42 +1,73 @@
-// api/radio-proxy.js
-export default async function handler(req, res) {
-  // Enable CORS for your site
-  res.setHeader('Access-Control-Allow-Origin', 'https://radio-station-website-client.onrender.com');
-  res.setHeader('Access-Control-Allow-Methods', 'GET, OPTIONS');
-  res.setHeader('Access-Control-Allow-Headers', 'Content-Type');
-  
-  // Handle preflight requests
-  if (req.method === 'OPTIONS') {
-    res.status(200).end();
-    return;
-  }
+// Example: app.js or server.js on your Render backend
+import express from 'express';
+import fetch from 'node-fetch'; // or use axios
+import cors from 'cors';
 
+const app = express();
+
+// Enable CORS for your frontend
+app.use(cors({
+  origin: 'https://radio-station-website-client.onrender.com', // Allow only your frontend
+  methods: ['GET'],
+}));
+
+// Proxy endpoint for stream (audio data)
+app.get('/api/radio-proxy', async (req, res) => {
   const { type } = req.query;
-  const password = 'vmGoixyJlm'; // Replace with your actual password
-  
-  try {
-    if (type === 'stream') {
-      // For audio stream - include authentication
-      const streamUrl = `https://source:${password}@sapircast.caster.fm:17962/u2ceg`;
+
+  if (type === 'stream') {
+    try {
+      // The actual Sternhost stream URL
+      const streamUrl = 'https://radio.sternhost.com/radio.mp3';
+      
+      // Fetch the stream from Sternhost
       const response = await fetch(streamUrl);
       
-      // Set proper headers for audio streaming
-      res.setHeader('Content-Type', 'audio/mpeg');
-      res.setHeader('Transfer-Encoding', 'chunked');
+      // Forward the correct headers
+      res.set({
+        'Content-Type': 'audio/mpeg',
+        'Cache-Control': 'no-cache',
+      });
       
-      // Pipe the stream
+      // Pipe the stream directly to the client
       response.body.pipe(res);
-    } 
-    else if (type === 'status') {
-      // For status JSON - no auth needed
-      const statusUrl = 'https://sapircast.caster.fm:17962/status-json.xsl';
-      const response = await fetch(statusUrl);
+    } catch (error) {
+      console.error('Stream proxy error:', error);
+      res.status(500).send('Stream unavailable');
+    }
+  } 
+  else if (type === 'status') {
+    try {
+      // Use your actual AzuraCast API URL and key from environment variables
+      const apiUrl = process.env.VITE_AZURACAST_API_URL;
+      const apiKey = process.env.VITE_AZURACAST_API_KEY;
+      const stationId = process.env.VITE_STATION_ID || '1149';
+      
+      // Fetch now-playing data from Sternhost's AzuraCast API
+      const response = await fetch(`${apiUrl}/api/nowplaying/${stationId}`, {
+        headers: {
+          'X-API-Key': apiKey,
+          'Accept': 'application/json',
+        },
+      });
+      
+      if (!response.ok) {
+        throw new Error(`API responded with ${response.status}`);
+      }
+      
       const data = await response.json();
       
+      // Send the data to your frontend
       res.json(data);
+    } catch (error) {
+      console.error('Status proxy error:', error);
+      res.status(500).json({ error: 'Could not fetch now playing data' });
     }
-  } catch (error) {
-    console.error('Proxy error:', error);
-    res.status(500).json({ error: 'Failed to fetch' });
+  } else {
+    res.status(400).send('Invalid request type');
   }
-}
+});
+
+app.listen(3000, () => {
+  console.log('Proxy server running on port 3000');
+});
