@@ -422,6 +422,185 @@ app.get("/api/health", (req, res) => {
   });
 });
 
+
+
+// Add this near your other app.use() statements, BEFORE your 404 handler
+import fetch from "node-fetch"; // Add this at the top with other imports
+
+// ───────── Radio Stream Proxy Endpoints ─────────
+app.get("/api/radio-proxy", async (req, res) => {
+  const { type } = req.query;
+
+  // Handle preflight requests
+  if (req.method === 'OPTIONS') {
+    res.set({
+      'Access-Control-Allow-Origin': req.headers.origin || '*',
+      'Access-Control-Allow-Methods': 'GET, OPTIONS',
+      'Access-Control-Allow-Headers': 'Content-Type',
+    });
+    return res.status(200).end();
+  }
+
+  // Stream endpoint - forwards audio data
+  if (type === "stream") {
+    try {
+      // Try multiple possible stream URLs (common AzuraCast configurations)
+      const possibleUrls = [
+        "https://radio.sternhost.com/radio.mp3",
+        "https://radio.sternhost.com:8000/radio.mp3",
+        "https://radio.sternhost.com/stream",
+        "https://radio.sternhost.com:8000/stream",
+        "https://radio.sternhost.com/listen/station_1149_1773756634/radio.mp3"
+      ];
+      
+      let workingUrl = null;
+      
+      // Try each URL to find a working one
+      for (const url of possibleUrls) {
+        try {
+          console.log(`Trying stream URL: ${url}`);
+          const testResponse = await fetch(url, { 
+            method: 'HEAD',
+            timeout: 5000 
+          });
+          
+          if (testResponse.ok) {
+            workingUrl = url;
+            console.log(`✅ Found working stream: ${workingUrl}`);
+            break;
+          }
+        } catch (e) {
+          console.log(`❌ Failed: ${url}`);
+          continue;
+        }
+      }
+      
+      if (!workingUrl) {
+        // If none work, use the default and hope for the best
+        workingUrl = "https://radio.sternhost.com/radio.mp3";
+        console.log(`⚠️ Using default stream URL: ${workingUrl}`);
+      }
+      
+      // Add timestamp to prevent caching
+      const url = new URL(workingUrl);
+      url.searchParams.append('_', Date.now());
+      
+      const response = await fetch(url.toString());
+      
+      if (!response.ok) {
+        throw new Error(`Stream returned ${response.status}`);
+      }
+      
+      // Set proper headers for audio streaming
+      res.set({
+        'Content-Type': 'audio/mpeg',
+        'Cache-Control': 'no-cache, no-store, must-revalidate',
+        'Pragma': 'no-cache',
+        'Expires': '0',
+        'Access-Control-Allow-Origin': req.headers.origin || '*',
+        'Access-Control-Allow-Methods': 'GET, OPTIONS',
+        'Access-Control-Allow-Headers': 'Content-Type',
+        'Transfer-Encoding': 'chunked',
+      });
+      
+      // Pipe the audio stream to the client
+      response.body.pipe(res);
+      
+    } catch (error) {
+      console.error('❌ Stream proxy error:', error.message);
+      res.status(502).json({ 
+        error: 'Stream unavailable',
+        details: error.message 
+      });
+    }
+  } 
+  // Status endpoint - returns now-playing JSON data
+  else if (type === "status") {
+    try {
+      // Try to get status from AzuraCast API
+      const apiKey = process.env.VITE_AZURACAST_API_KEY;
+      const stationId = process.env.VITE_STATION_ID || "1149";
+      
+      // Try multiple possible status endpoints
+      const possibleStatusUrls = [
+        `https://radio.sternhost.com/api/nowplaying/${stationId}`,
+        "https://radio.sternhost.com/status-json.xsl",
+        `https://radio.sternhost.com/public/station_${stationId}_1773756634/status`,
+      ];
+      
+      let statusData = null;
+      
+      // Try API endpoint with API key first
+      if (apiKey) {
+        try {
+          const response = await fetch(possibleStatusUrls[0], {
+            headers: { 'X-API-Key': apiKey }
+          });
+          if (response.ok) {
+            statusData = await response.json();
+            console.log("✅ Got status from API");
+          }
+        } catch (e) {
+          console.log("API endpoint failed, trying others...");
+        }
+      }
+      
+      // If API failed, try status-json.xsl
+      if (!statusData) {
+        try {
+          const response = await fetch(possibleStatusUrls[1]);
+          if (response.ok) {
+            statusData = await response.json();
+            console.log("✅ Got status from status-json.xsl");
+          }
+        } catch (e) {
+          console.log("status-json.xsl failed");
+        }
+      }
+      
+      // If all else fails, return mock data
+      if (!statusData) {
+        console.log("⚠️ Using mock status data");
+        statusData = {
+          now_playing: {
+            song: {
+              title: "Live Broadcast",
+              artist: "Nexter FM"
+            }
+          },
+          listeners: { current: 0 },
+          station: { name: "Nexter FM" }
+        };
+      }
+      
+      // Set CORS headers
+      res.set({
+        'Access-Control-Allow-Origin': req.headers.origin || '*',
+        'Cache-Control': 's-maxage=5, stale-while-revalidate',
+        'Content-Type': 'application/json',
+      });
+      
+      res.json(statusData);
+      
+    } catch (error) {
+      console.error('❌ Status proxy error:', error.message);
+      res.status(502).json({ 
+        error: 'Could not fetch now-playing data',
+        details: error.message,
+        now_playing: {
+          song: {
+            title: "Live Broadcast",
+            artist: "Nexter FM"
+          }
+        },
+        listeners: { current: 0 }
+      });
+    }
+  } else {
+    res.status(400).json({ error: 'Invalid request type. Use ?type=stream or ?type=status' });
+  }
+});
+
 // 404 handler
 app.use((req, res) => {
   res.status(404).json({
