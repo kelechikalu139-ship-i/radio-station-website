@@ -909,6 +909,303 @@
 // }
 
 // src/context/AudioContext.jsx
+// import React, {
+//   createContext,
+//   useContext,
+//   useRef,
+//   useState,
+//   useEffect,
+//   useCallback,
+// } from "react";
+
+// const AudioContext = createContext(null);
+
+// export function AudioProvider({
+//   children,
+//   streamUrl = import.meta.env.VITE_STREAM_URL,
+//   nowPlayingUrl = import.meta.env.VITE_NOWPLAYING_URL,
+//   nowPlayingPollMs = import.meta.env.VITE_NOWPLAYING_POLL_MS || 10000,
+// }) {
+//   const audioRef = useRef(null);
+//   const reconnectTimer = useRef(null);
+//   const reconnectAttempts = useRef(0);
+//   const maxReconnectAttempts = 5;
+
+//   const [playing, setPlaying] = useState(false);
+//   const [volume, setVolumeState] = useState(0.8);
+//   const [connectionState, setConnectionState] = useState('idle');
+//   const [nowPlaying, setNowPlaying] = useState({
+//     title: "Nexter FM Live",
+//     artist: "On Air",
+//     show: "24/7 Broadcast",
+//     listeners: 0,
+//     songHistory: [],
+//     bitrate: 128,
+//     listenerPeak: 0,
+//   });
+
+//   const attachSource = useCallback(() => {
+//     const audio = audioRef.current;
+//     if (!audio || !streamUrl) return;
+
+//     console.log("🎵 Connecting via proxy to:", streamUrl);
+    
+//     // Add timestamp to prevent caching
+//     const url = new URL(streamUrl);
+//     url.searchParams.append('_', Date.now());
+    
+//     // Clear any existing source
+//     audio.pause();
+//     audio.removeAttribute('src');
+//     audio.load();
+    
+//     // Set new source
+//     audio.src = url.toString();
+//     audio.crossOrigin = "anonymous";
+//     audio.preload = "none";
+//     audio.volume = volume;
+    
+//     setConnectionState('connecting');
+//     reconnectAttempts.current = 0;
+    
+//   }, [streamUrl, volume]);
+
+//   const play = useCallback(async () => {
+//     const audio = audioRef.current;
+//     if (!audio) return;
+
+//     try {
+//       if (!audio.src) {
+//         attachSource();
+//         // Wait a bit for the source to be set
+//         await new Promise(resolve => setTimeout(resolve, 300));
+//       }
+      
+//       console.log("▶️ Starting playback...");
+      
+//       const playPromise = audio.play();
+      
+//       if (playPromise !== undefined) {
+//         await playPromise;
+//         console.log("✅ Playback started successfully");
+//         setPlaying(true);
+//         setConnectionState('connected');
+//         reconnectAttempts.current = 0;
+//       }
+//     } catch (err) {
+//       console.warn("❌ Play failed:", err.message);
+//       setConnectionState('error');
+//       setPlaying(false);
+      
+//       // Retry logic with exponential backoff
+//       if (reconnectAttempts.current < maxReconnectAttempts) {
+//         reconnectAttempts.current++;
+//         const delay = Math.min(1000 * Math.pow(2, reconnectAttempts.current), 30000);
+        
+//         console.log(`Retry attempt ${reconnectAttempts.current}/${maxReconnectAttempts} in ${delay}ms`);
+        
+//         setTimeout(() => {
+//           attachSource();
+//           play();
+//         }, delay);
+//       } else {
+//         console.log("Max reconnect attempts reached");
+//         setConnectionState('disconnected');
+//       }
+//     }
+//   }, [attachSource]);
+
+//   const pause = useCallback(() => {
+//     const audio = audioRef.current;
+//     if (audio) {
+//       audio.pause();
+//     }
+//     setPlaying(false);
+//     setConnectionState('idle');
+//     reconnectAttempts.current = 0;
+//   }, []);
+
+//   const toggle = useCallback(() => {
+//     playing ? pause() : play();
+//   }, [playing, play, pause]);
+
+//   const setVolume = useCallback((v) => {
+//     const value = Math.min(1, Math.max(0, Number(v)));
+//     setVolumeState(value);
+//     if (audioRef.current) {
+//       audioRef.current.volume = value;
+//     }
+//   }, []);
+
+//   // Fetch now playing from your proxy
+//   useEffect(() => {
+//     if (!nowPlayingUrl) return;
+
+//     const fetchNowPlaying = async () => {
+//       try {
+//         const url = new URL(nowPlayingUrl);
+//         url.searchParams.append('_', Date.now());
+        
+//         const res = await fetch(url.toString(), {
+//           cache: 'no-store',
+//           headers: {
+//             'Accept': 'application/json',
+//           }
+//         });
+        
+//         if (!res.ok) {
+//           throw new Error(`Proxy returned ${res.status}`);
+//         }
+        
+//         const data = await res.json();
+//         console.log("Now playing data from proxy:", data);
+        
+//         // Extract data from AzuraCast response
+//         const nowPlaying = data.now_playing || {};
+//         const song = nowPlaying.song || {};
+//         const listeners = data.listeners || {};
+//         const station = data.station || {};
+        
+//         // Parse song title (handle "Artist - Title" format)
+//         let title = song.title || "Live Broadcast";
+//         let artist = song.artist || "Nexter FM";
+        
+//         // If title contains " - ", split it (some streams send combined format)
+//         if (title.includes(' - ') && !artist) {
+//           const parts = title.split(' - ');
+//           artist = parts[0];
+//           title = parts[1];
+//         }
+        
+//         // Get song history (last 5 songs)
+//         const songHistory = (data.song_history || []).slice(0, 5).map(item => ({
+//           title: item.song?.title || "Unknown",
+//           artist: item.song?.artist || "Unknown",
+//           played_at: item.played_at,
+//         }));
+        
+//         setNowPlaying({
+//           title,
+//           artist,
+//           show: station.name || "Nexter FM",
+//           listeners: listeners.current || 0,
+//           listenerPeak: listeners.total || 0,
+//           songHistory,
+//           bitrate: nowPlaying.streamer?.bitrate || 128,
+//           live: nowPlaying.is_live || false,
+//           streamerName: nowPlaying.streamer?.name || null,
+//         });
+        
+//       } catch (err) {
+//         console.debug("Now-playing fetch failed:", err.message);
+//         // Don't update state on error - keep showing last known data
+//       }
+//     };
+
+//     fetchNowPlaying();
+//     const id = setInterval(fetchNowPlaying, nowPlayingPollMs);
+
+//     return () => clearInterval(id);
+//   }, [nowPlayingUrl, nowPlayingPollMs]);
+
+//   // Audio event listeners
+//   useEffect(() => {
+//     const audio = audioRef.current;
+//     if (!audio) return;
+
+//     const handlers = {
+//       play: () => {
+//         setPlaying(true);
+//         setConnectionState('connected');
+//       },
+//       pause: () => {
+//         setPlaying(false);
+//         setConnectionState('idle');
+//       },
+//       waiting: () => setConnectionState('buffering'),
+//       playing: () => setConnectionState('connected'),
+//       stalled: () => setConnectionState('stalled'),
+//       error: (e) => {
+//         console.error("Audio error:", e);
+//         setConnectionState('error');
+//         if (playing) {
+//           // Clear any existing reconnect timer
+//           if (reconnectTimer.current) {
+//             clearTimeout(reconnectTimer.current);
+//           }
+//           // Schedule reconnect
+//           reconnectTimer.current = setTimeout(() => {
+//             attachSource();
+//             play();
+//             reconnectTimer.current = null;
+//           }, 3000);
+//         }
+//       },
+//       ended: () => {
+//         console.log("Stream ended");
+//         setConnectionState('ended');
+//         if (playing) {
+//           // Try to reconnect if it ended unexpectedly
+//           setTimeout(() => {
+//             attachSource();
+//             play();
+//           }, 2000);
+//         }
+//       },
+//       volumechange: () => {
+//         setVolumeState(audio.volume);
+//       }
+//     };
+
+//     Object.entries(handlers).forEach(([event, handler]) => {
+//       audio.addEventListener(event, handler);
+//     });
+
+//     return () => {
+//       Object.entries(handlers).forEach(([event, handler]) => {
+//         audio.removeEventListener(event, handler);
+//       });
+//       if (reconnectTimer.current) {
+//         clearTimeout(reconnectTimer.current);
+//       }
+//     };
+//   }, [attachSource, play, playing]);
+
+//   // Initial source attachment
+//   useEffect(() => {
+//     attachSource();
+//   }, [attachSource]);
+
+//   return (
+//     <AudioContext.Provider
+//       value={{
+//         playing,
+//         play,
+//         pause,
+//         toggle,
+//         volume,
+//         setVolume,
+//         nowPlaying,
+//         connectionState,
+//       }}
+//     >
+//       {children}
+//       <audio ref={audioRef} preload="none" />
+//     </AudioContext.Provider>
+//   );
+// }
+
+// export function useAudio() {
+//   const ctx = useContext(AudioContext);
+//   if (!ctx) throw new Error("useAudio must be used within AudioProvider");
+//   return ctx;
+// }
+
+
+
+
+
+// src/context/AudioContext.jsx
 import React, {
   createContext,
   useContext,
@@ -942,13 +1239,18 @@ export function AudioProvider({
     songHistory: [],
     bitrate: 128,
     listenerPeak: 0,
+    live: false,
+    streamerName: null,
   });
+
+  // Determine if we're in development mode
+  const isDev = import.meta.env.MODE === 'development';
 
   const attachSource = useCallback(() => {
     const audio = audioRef.current;
     if (!audio || !streamUrl) return;
 
-    console.log("🎵 Connecting via proxy to:", streamUrl);
+    if (isDev) console.log("🎵 Connecting via proxy to:", streamUrl);
     
     // Add timestamp to prevent caching
     const url = new URL(streamUrl);
@@ -968,7 +1270,7 @@ export function AudioProvider({
     setConnectionState('connecting');
     reconnectAttempts.current = 0;
     
-  }, [streamUrl, volume]);
+  }, [streamUrl, volume, isDev]);
 
   const play = useCallback(async () => {
     const audio = audioRef.current;
@@ -981,13 +1283,13 @@ export function AudioProvider({
         await new Promise(resolve => setTimeout(resolve, 300));
       }
       
-      console.log("▶️ Starting playback...");
+      if (isDev) console.log("▶️ Starting playback...");
       
       const playPromise = audio.play();
       
       if (playPromise !== undefined) {
         await playPromise;
-        console.log("✅ Playback started successfully");
+        if (isDev) console.log("✅ Playback started successfully");
         setPlaying(true);
         setConnectionState('connected');
         reconnectAttempts.current = 0;
@@ -1013,7 +1315,7 @@ export function AudioProvider({
         setConnectionState('disconnected');
       }
     }
-  }, [attachSource]);
+  }, [attachSource, isDev]);
 
   const pause = useCallback(() => {
     const audio = audioRef.current;
@@ -1023,7 +1325,9 @@ export function AudioProvider({
     setPlaying(false);
     setConnectionState('idle');
     reconnectAttempts.current = 0;
-  }, []);
+    
+    if (isDev) console.log("⏸️ Playback paused");
+  }, [isDev]);
 
   const toggle = useCallback(() => {
     playing ? pause() : play();
@@ -1035,7 +1339,8 @@ export function AudioProvider({
     if (audioRef.current) {
       audioRef.current.volume = value;
     }
-  }, []);
+    if (isDev) console.log("🔊 Volume set to:", value);
+  }, [isDev]);
 
   // Fetch now playing from your proxy
   useEffect(() => {
@@ -1058,13 +1363,18 @@ export function AudioProvider({
         }
         
         const data = await res.json();
-        console.log("Now playing data from proxy:", data);
+        
+        // Only log in development
+        if (isDev) {
+          console.log("Now playing data from proxy:", data);
+        }
         
         // Extract data from AzuraCast response
         const nowPlaying = data.now_playing || {};
         const song = nowPlaying.song || {};
         const listeners = data.listeners || {};
         const station = data.station || {};
+        const live = nowPlaying.is_live || false;
         
         // Parse song title (handle "Artist - Title" format)
         let title = song.title || "Live Broadcast";
@@ -1073,8 +1383,8 @@ export function AudioProvider({
         // If title contains " - ", split it (some streams send combined format)
         if (title.includes(' - ') && !artist) {
           const parts = title.split(' - ');
-          artist = parts[0];
-          title = parts[1];
+          artist = parts[0] || "Nexter FM";
+          title = parts[1] || "Live Broadcast";
         }
         
         // Get song history (last 5 songs)
@@ -1092,11 +1402,12 @@ export function AudioProvider({
           listenerPeak: listeners.total || 0,
           songHistory,
           bitrate: nowPlaying.streamer?.bitrate || 128,
-          live: nowPlaying.is_live || false,
+          live,
           streamerName: nowPlaying.streamer?.name || null,
         });
         
       } catch (err) {
+        // Always log errors, even in production
         console.debug("Now-playing fetch failed:", err.message);
         // Don't update state on error - keep showing last known data
       }
@@ -1106,7 +1417,7 @@ export function AudioProvider({
     const id = setInterval(fetchNowPlaying, nowPlayingPollMs);
 
     return () => clearInterval(id);
-  }, [nowPlayingUrl, nowPlayingPollMs]);
+  }, [nowPlayingUrl, nowPlayingPollMs, isDev]);
 
   // Audio event listeners
   useEffect(() => {
@@ -1117,16 +1428,27 @@ export function AudioProvider({
       play: () => {
         setPlaying(true);
         setConnectionState('connected');
+        if (isDev) console.log("🎵 Audio event: play");
       },
       pause: () => {
         setPlaying(false);
         setConnectionState('idle');
+        if (isDev) console.log("⏸️ Audio event: pause");
       },
-      waiting: () => setConnectionState('buffering'),
-      playing: () => setConnectionState('connected'),
-      stalled: () => setConnectionState('stalled'),
+      waiting: () => {
+        setConnectionState('buffering');
+        if (isDev) console.log("⏳ Audio event: waiting/buffering");
+      },
+      playing: () => {
+        setConnectionState('connected');
+        if (isDev) console.log("▶️ Audio event: playing");
+      },
+      stalled: () => {
+        setConnectionState('stalled');
+        if (isDev) console.log("⚠️ Audio event: stalled");
+      },
       error: (e) => {
-        console.error("Audio error:", e);
+        console.error("❌ Audio error:", e);
         setConnectionState('error');
         if (playing) {
           // Clear any existing reconnect timer
@@ -1135,6 +1457,7 @@ export function AudioProvider({
           }
           // Schedule reconnect
           reconnectTimer.current = setTimeout(() => {
+            if (isDev) console.log("🔄 Attempting to reconnect...");
             attachSource();
             play();
             reconnectTimer.current = null;
@@ -1142,7 +1465,7 @@ export function AudioProvider({
         }
       },
       ended: () => {
-        console.log("Stream ended");
+        if (isDev) console.log("🔚 Audio event: ended");
         setConnectionState('ended');
         if (playing) {
           // Try to reconnect if it ended unexpectedly
@@ -1154,6 +1477,12 @@ export function AudioProvider({
       },
       volumechange: () => {
         setVolumeState(audio.volume);
+      },
+      loadeddata: () => {
+        if (isDev) console.log("📦 Audio event: loadeddata");
+      },
+      canplay: () => {
+        if (isDev) console.log("✅ Audio event: canplay");
       }
     };
 
@@ -1169,12 +1498,22 @@ export function AudioProvider({
         clearTimeout(reconnectTimer.current);
       }
     };
-  }, [attachSource, play, playing]);
+  }, [attachSource, play, playing, isDev]);
 
   // Initial source attachment
   useEffect(() => {
     attachSource();
   }, [attachSource]);
+
+  // Cleanup on unmount
+  useEffect(() => {
+    return () => {
+      if (audioRef.current) {
+        audioRef.current.pause();
+        audioRef.current.src = '';
+      }
+    };
+  }, []);
 
   return (
     <AudioContext.Provider
@@ -1190,7 +1529,11 @@ export function AudioProvider({
       }}
     >
       {children}
-      <audio ref={audioRef} preload="none" />
+      <audio 
+        ref={audioRef} 
+        preload="none"
+        onError={(e) => console.error("Audio element error:", e)}
+      />
     </AudioContext.Provider>
   );
 }
