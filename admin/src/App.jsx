@@ -185,7 +185,10 @@ export default function App() {
       </Route>
 
       {/* <Route path="*" element={<div className="p-6">404 — Not found</div>} /> */}
-      <Route path="*" element={<div className="p-6"><Unauthorized/></div>} />
+      {/* <Route path="*" element={<div className="p-6"><Unauthorized/></div>} /> */}
+      // In App.jsx, replace the * wildcard with these two routes:
+      <Route path="/unauthorized" element={<Unauthorized />} />
+      <Route path="*" element={<div className="p-6">404 — Not found</div>} />
     </Routes>
   );
 }

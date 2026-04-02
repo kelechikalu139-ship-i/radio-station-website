@@ -1,105 +1,88 @@
-import { useEffect, useState } from "react";
-import { motion } from "framer-motion";
+import React from "react";
+import { Calendar } from "lucide-react";
 import { Link } from "react-router-dom";
-import api from "../../api/api";
+import { Facebook, Twitter, Linkedin, MessageCircle, Share2 } from "lucide-react";
 
-export default function LatestUpdates() {
-  const [updates, setUpdates] = useState([]);
-  const [loading, setLoading] = useState(true);
-
-  useEffect(() => {
-    let mounted = true;
-
-    async function fetchUpdates() {
-      try {
-        setLoading(true);
-
-        const res = await api.get("/api/news", {
-          params: {
-            status: "published",
-          },
-        });
-
-        if (mounted) {
-          const sorted = [...(res.data || [])]
-            .sort((a, b) => new Date(b.created_at) - new Date(a.created_at))
-            .slice(0, 5); // LIMIT FOR HOMEPAGE
-
-          setUpdates(sorted);
-        }
-      } catch (err) {
-        console.error("Failed to load updates", err);
-      } finally {
-        if (mounted) setLoading(false);
-      }
-    }
-
-    fetchUpdates();
-
-    return () => {
-      mounted = false;
-    };
-  }, []);
-
-  if (loading) {
+export default function LatestUpdates({ updates = [] }) {
+  if (updates.length === 0) {
     return (
-      <div className="bg-gray-50 rounded-2xl p-5">
-        <h4 className="text-lg font-bold text-gray-800 mb-4">
-          Latest Updates
-        </h4>
-        <div className="space-y-3">
-          {[...Array(5)].map((_, i) => (
-            <div key={i} className="bg-white p-4 rounded-xl animate-pulse">
-              <div className="h-4 bg-gray-200 rounded w-20 mb-2"></div>
-              <div className="h-4 bg-gray-300 rounded w-full"></div>
-            </div>
-          ))}
-        </div>
+      <div className="bg-white rounded-2xl p-6 text-center text-gray-500">
+        No updates available at the moment.
       </div>
     );
   }
 
+  const handleShare = (e, platform, item) => {
+    e.preventDefault();
+    e.stopPropagation();
+
+    const newsId = item.id || item._id;
+    const shareUrl = `${window.location.origin}/newsevent/${newsId}`;
+    const title = item.title;
+
+    switch (platform) {
+      case "facebook":
+        window.open(`https://www.facebook.com/sharer/sharer.php?u=${encodeURIComponent(shareUrl)}`, "_blank");
+        break;
+      case "twitter":
+        window.open(`https://twitter.com/intent/tweet?url=${encodeURIComponent(shareUrl)}&text=${encodeURIComponent(title)}`, "_blank");
+        break;
+      case "linkedin":
+        window.open(`https://www.linkedin.com/sharing/share-offsite/?url=${encodeURIComponent(shareUrl)}`, "_blank");
+        break;
+      case "whatsapp":
+        window.open(`https://wa.me/?text=${encodeURIComponent(title + "\n" + shareUrl)}`, "_blank");
+        break;
+      case "copy":
+        navigator.clipboard.writeText(shareUrl).then(() => alert("Link copied!"));
+        break;
+    }
+  };
+
   return (
-    <div className="bg-gray-50 rounded-2xl p-5">
-      <h4 className="text-lg font-bold text-gray-800 mb-4">
-        Latest Updates
-      </h4>
+    <div className="bg-white rounded-2xl p-6 shadow">
+      <h4 className="text-lg font-bold text-gray-800 mb-5">Latest Updates</h4>
 
       <div className="space-y-4">
-        {updates.map((item) => {
-          const isEvent = item.type === "event";
+        {updates.slice(0, 5).map((item) => {
+          const newsId = item.id || item._id;
 
           return (
-            <motion.div
-              key={item.id}
-              whileHover={{ x: 4 }}
-              className="block bg-white rounded-xl p-4 shadow-sm hover:shadow transition"
-            >
-              <Link to={`/newsevent/${item.id}`}>
-                <div className="flex items-center justify-between">
-                  <span
-                    className={`text-xs font-bold px-2 py-1 rounded-full
-                    ${
-                      isEvent
-                        ? "bg-purple-100 text-purple-700"
-                        : "bg-yellow-100 text-yellow-700"
-                    }`}
-                  >
-                    {isEvent ? "Event" : "News"}
-                  </span>
-
-                  <span className="text-xs text-gray-500">
-                    {item.created_at
-                      ? new Date(item.created_at).toLocaleDateString()
-                      : ""}
-                  </span>
-                </div>
-
-                <div className="mt-2 font-semibold text-gray-800 line-clamp-2">
+            <div key={newsId} className="group bg-gray-50 hover:bg-white p-5 rounded-xl transition-all border border-transparent hover:border-gray-100">
+              <Link to={`/newsevent/${newsId}`} className="block">
+                <div className="font-medium text-gray-800 group-hover:text-purple-700 line-clamp-2 leading-snug">
                   {item.title}
                 </div>
+
+                <div className="flex items-center gap-2 mt-3 text-xs text-gray-500">
+                  <Calendar size={14} />
+                  <span>
+                    {item.created_at
+                      ? new Date(item.created_at).toLocaleDateString("en-US", { month: "short", day: "numeric" })
+                      : "Recent"}
+                  </span>
+                </div>
               </Link>
-            </motion.div>
+
+              {/* Minimal Share Icons */}
+              <div className="flex gap-4 mt-4 text-gray-400">
+                <button onClick={(e) => handleShare(e, "facebook", item)} className="hover:text-blue-600 transition">
+                  <Facebook size={16} />
+                </button>
+                <button onClick={(e) => handleShare(e, "twitter", item)} className="hover:text-black transition">
+                  <Twitter size={16} />
+                </button>
+                <button onClick={(e) => handleShare(e, "linkedin", item)} className="hover:text-blue-700 transition">
+                  <Linkedin size={16} />
+                </button>
+                <button onClick={(e) => handleShare(e, "whatsapp", item)} className="hover:text-green-600 transition">
+                  <MessageCircle size={16} />
+                </button>
+                <button onClick={(e) => handleShare(e, "copy", item)} className="hover:text-gray-600 transition">
+                  <Share2 size={16} />
+                </button>
+              </div>
+            </div>
           );
         })}
       </div>

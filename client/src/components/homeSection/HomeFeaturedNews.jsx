@@ -1,117 +1,116 @@
-import { useEffect, useState } from "react";
-import { Link } from "react-router-dom";
-import { motion } from "framer-motion";
+import React from "react";
 import { Calendar, ArrowRight } from "lucide-react";
-import api from "../../api/api";
-import { SkeletonLoader } from "../ui/SkeletonLoader";
+import { Link } from "react-router-dom";
+import { Facebook, Twitter, Linkedin, MessageCircle, Share2 } from "lucide-react";
+import { motion } from "framer-motion";
 
-export default function HomeFeaturedNews() {
-  const [featured, setFeatured] = useState(null);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState(null);
+export default function HomeFeaturedNews({ featuredNews }) {
+  if (!featuredNews) {
+    return (
+      <div className="bg-white rounded-3xl h-96 flex items-center justify-center text-gray-500">
+        No featured news available
+      </div>
+    );
+  }
 
-  useEffect(() => {
-    let mounted = true;
+  const newsId = featuredNews.id || featuredNews._id;
+  const shareUrl = `${window.location.origin}/newsevent/${newsId}`;
+  const shareTitle = featuredNews.title;
 
-    async function loadFeatured() {
-      try {
-        setLoading(true);
-        setError(null);
-
-        const res = await api.get("/api/news", {
-          params: { featured: 1 },
-        });
-
-        const featuredItem = res.data?.[0] || null;
-
-        if (mounted) {
-          setFeatured(featuredItem);
-        }
-      } catch (err) {
-        console.error("Failed to load featured news:", err);
-        if (mounted) {
-          setError("Could not load featured news");
-        }
-      } finally {
-        if (mounted) {
-          setLoading(false);
-        }
-      }
+  const handleShare = (platform) => {
+    switch (platform) {
+      case "facebook":
+        window.open(`https://www.facebook.com/sharer/sharer.php?u=${encodeURIComponent(shareUrl)}`, "_blank");
+        break;
+      case "twitter":
+        window.open(`https://twitter.com/intent/tweet?url=${encodeURIComponent(shareUrl)}&text=${encodeURIComponent(shareTitle)}`, "_blank");
+        break;
+      case "linkedin":
+        window.open(`https://www.linkedin.com/sharing/share-offsite/?url=${encodeURIComponent(shareUrl)}`, "_blank");
+        break;
+      case "whatsapp":
+        window.open(`https://wa.me/?text=${encodeURIComponent(shareTitle + "\n" + shareUrl)}`, "_blank");
+        break;
+      case "copy":
+        navigator.clipboard.writeText(shareUrl).then(() => alert("Link copied!"));
+        break;
     }
+  };
 
-    loadFeatured();
-
-    return () => {
-      mounted = false;
-    };
-  }, []);
-
-  if (loading) {
-    return <SkeletonLoader />;
-  }
-
-  if (error || !featured) {
-    return null;
-  }
-
-  const excerpt =
-    featured.content?.replace(/<[^>]+>/g, "").slice(0, 150) + "...";
+  const excerpt = featuredNews.content
+    ? featuredNews.content.replace(/<[^>]+>/g, "").slice(0, 130) + "..."
+    : featuredNews.excerpt || "";
 
   return (
-    <section className="container mx-auto px-5 py-14">
-      <motion.article
-        whileHover={{ y: -4 }}
-        className="lg:col-span-7 rounded-3xl overflow-hidden shadow-lg bg-white"
-      >
-        {/* Image */}
-        <div className="relative h-64 sm:h-72">
-          <img
-            src={featured.image_url || "/images/news/news1.jpeg"}
-            alt={featured.title}
-            className="absolute inset-0 w-full h-full object-cover"
-          />
+    <motion.article
+      whileHover={{ y: -4 }}
+      className="bg-white rounded-3xl overflow-hidden shadow-lg"
+    >
+      {/* Image */}
+      <div className="relative h-[260px] md:h-[300px]">
+        <img
+          src={featuredNews.image_url || featuredNews.photo || "/images/news/news1.jpeg"}
+          alt={featuredNews.title}
+          className="w-full h-full object-cover"
+        />
+        <div className="absolute inset-0 bg-gradient-to-t from-black/70 to-transparent" />
 
-          {/* Gradient overlay */}
-          <div className="absolute inset-0 bg-linear-to-t from-black/70 to-transparent" />
+        <span className="absolute top-4 left-4 bg-yellow-400 text-purple-900 text-xs font-bold px-4 py-1 rounded-full">
+          FEATURED
+        </span>
+      </div>
 
-          {/* Badge */}
-          <span className="absolute top-4 left-4 bg-yellow-400 text-purple-900 text-xs font-bold px-3 py-1 rounded-full">
-            FEATURED
+      {/* Content - Very Compact */}
+      <div className="p-6">
+        <div className="flex items-center gap-3 text-sm text-gray-500 mb-3">
+          <Calendar size={15} />
+          <span>
+            {new Date(featuredNews.created_at).toLocaleDateString("en-US", {
+              month: "long",
+              day: "numeric",
+              year: "numeric",
+            })}
           </span>
         </div>
 
-        {/* Content */}
-        <div className="p-6">
-          <div className="flex items-center gap-3 text-sm text-gray-500">
-            <span className="flex items-center gap-1">
-              <Calendar size={14} />
-              {new Date(featured.created_at).toLocaleDateString()}
-            </span>
+        <h3 className="text-[22px] leading-tight font-bold text-gray-900 mb-4 line-clamp-2">
+          {featuredNews.title}
+        </h3>
 
-            {featured.category && (
-              <span className="text-purple-700 font-semibold">
-                {featured.category}
-              </span>
-            )}
-          </div>
+        <p className="text-gray-600 text-[15px] leading-relaxed mb-6 line-clamp-3">
+          {excerpt}
+        </p>
 
-          <h3 className="mt-3 text-2xl font-bold text-gray-900">
-            {featured.title}
-          </h3>
-
-          <p className="mt-3 text-gray-600 leading-relaxed">
-            {excerpt}
-          </p>
-
+        {/* Read Full Story + Small Share Icons */}
+        <div className="flex items-center justify-between pt-4 border-t border-gray-100">
           <Link
-            to={`/news/${featured.id}`}
-            className="inline-flex items-center gap-2 mt-5 font-semibold text-purple-700 hover:text-purple-900"
+            to={`/newsevent/${newsId}`}
+            className="text-purple-700 font-semibold flex items-center gap-1.5 hover:text-purple-800 transition text-[15px]"
           >
-            Read more
-            <ArrowRight size={16} />
+            Read Full Story
+            <ArrowRight size={17} />
           </Link>
+
+          {/* Very Small Share Buttons - Matching Screenshot Style */}
+          <div className="flex gap-3 text-gray-400">
+            <button onClick={() => handleShare("facebook")} className="hover:text-blue-600 transition" title="Facebook">
+              <Facebook size={17} />
+            </button>
+            <button onClick={() => handleShare("twitter")} className="hover:text-black transition" title="X">
+              <Twitter size={17} />
+            </button>
+            <button onClick={() => handleShare("linkedin")} className="hover:text-blue-700 transition" title="LinkedIn">
+              <Linkedin size={17} />
+            </button>
+            <button onClick={() => handleShare("whatsapp")} className="hover:text-green-600 transition" title="WhatsApp">
+              <MessageCircle size={17} />
+            </button>
+            <button onClick={() => handleShare("copy")} className="hover:text-gray-600 transition" title="Copy">
+              <Share2 size={17} />
+            </button>
+          </div>
         </div>
-      </motion.article>
-    </section>
+      </div>
+    </motion.article>
   );
 }

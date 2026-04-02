@@ -664,7 +664,7 @@ dotenv.config();
 
 import express from "express";
 import cors from "cors";
-import fetch from "node-fetch"; // Make sure to install: npm install node-fetch
+import fetch from "node-fetch";
 
 import adminRoutes from "./routes/admin.js";
 import oapRoutes from "./routes/oapRoutes.js";

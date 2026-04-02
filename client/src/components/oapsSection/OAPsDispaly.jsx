@@ -91,6 +91,9 @@ export default function OAPsDisplay() {
     try {
       const res = await api.get("/api/oap/oaps");
       setOaps(res.data.oaps || []);
+
+      //  const res = await api.get("/api/oap/oaps");
+//       setOaps(res.data.oaps || []);
     } catch (err) {
       console.error("Failed to load OAPs", err);
     } finally {
@@ -204,8 +207,7 @@ export default function OAPsDisplay() {
 
 //   async function loadOaps() {
 //     try {
-//       const res = await api.get("/api/oap/oaps");
-//       setOaps(res.data.oaps || []);
+//      
 //     } catch (err) {
 //       console.error("Failed to load OAPs", err);
 //     } finally {

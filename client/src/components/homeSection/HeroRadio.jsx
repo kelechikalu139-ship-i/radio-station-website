@@ -248,9 +248,10 @@ import {
   Link2,
 } from "lucide-react";
 import { useAudio } from "../../context/AudioContext";
+import api from "../../api/api";
 
 const HeroRadio = () => {
-  const { playing, toggle, volume, setVolume, nowPlaying } = useAudio();
+  const { playing, toggle, volume, setVolume } = useAudio();
 
   /* ================================
      HERO BACKGROUND CAROUSEL SETUP
@@ -265,6 +266,13 @@ const HeroRadio = () => {
 
   const [currentImage, setCurrentImage] = useState(0);
   const [loadedImages, setLoadedImages] = useState({});
+  const [liveProgram, setLiveProgram] = useState(null);
+
+  const fallbackProgram = {
+    title: "Nexter FM Live",
+    host_name: "24/7 Radio",
+    status: "Always On Air",
+  };
 
   useEffect(() => {
     heroImages.forEach((src) => {
@@ -288,6 +296,39 @@ const HeroRadio = () => {
 
     return () => clearInterval(interval);
   }, []);
+
+  useEffect(() => {
+    let isMounted = true;
+
+    const fetchLiveProgram = async () => {
+      try {
+        const res = await api.get("/api/schedule/live-program");
+        if (isMounted) {
+          setLiveProgram(res.data?.live || null);
+        }
+      } catch (error) {
+        if (isMounted) {
+          setLiveProgram(null);
+        }
+      }
+    };
+
+    fetchLiveProgram();
+    const interval = setInterval(fetchLiveProgram, 60000);
+
+    return () => {
+      isMounted = false;
+      clearInterval(interval);
+    };
+  }, []);
+
+  const heroOnAir = liveProgram
+    ? {
+        title: liveProgram.title || fallbackProgram.title,
+        host_name: liveProgram.host_name || "Nexter FM OAP",
+        status: "Program On Air",
+      }
+    : fallbackProgram;
 
   return (
     <section
@@ -369,18 +410,16 @@ const HeroRadio = () => {
               </a>
             </div>
 
-            {/* NOW PLAYING - safe rendering */}
+            {/* ON AIR */}
             <div className="mt-6 max-w-md bg-white/10 backdrop-blur border border-white/10 rounded-2xl p-4">
               <div className="flex justify-between items-center">
                 <div>
-                  <div className="text-sm text-white/80">Now Playing</div>
+                  <div className="text-sm text-white/80">On Air Now</div>
                   <div className="font-semibold text-lg">
-                    {nowPlaying?.title || "Nexter FM Live"}
+                    {heroOnAir.title}
                   </div>
-                  <div className="text-sm text-white/70">
-                    {nowPlaying?.artist || "On Air"} •{" "}
-                    {nowPlaying?.show || "24/7 Broadcast"}
-                  </div>
+                  <div className="text-sm text-white/70">{heroOnAir.host_name}</div>
+                  <div className="text-xs text-white/60">{heroOnAir.status}</div>
                 </div>
 
                 <div className="flex items-center gap-2">
@@ -416,7 +455,7 @@ const HeroRadio = () => {
             </div>
           </div>
 
-          {/* RIGHT CARD - safe rendering */}
+          {/* RIGHT CARD */}
           <div className="lg:col-span-5">
             <div className="rounded-3xl bg-linear-to-b from-purple-700 to-purple-800 p-6 shadow-2xl ring-1 ring-black/30">
               <div className="flex items-center gap-4">
@@ -426,10 +465,10 @@ const HeroRadio = () => {
                 <div>
                   <div className="text-yellow-200 text-sm">Live Now</div>
                   <div className="font-bold text-2xl">
-                    {nowPlaying?.title || "Nexter FM Live"}
+                    {heroOnAir.title}
                   </div>
                   <div className="text-white/80">
-                    {nowPlaying?.artist || "On Air"}
+                    {heroOnAir.host_name}
                   </div>
                 </div>
               </div>
